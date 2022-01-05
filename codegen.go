@@ -33,6 +33,11 @@ func genExpr(expr expression) {
 			fmt.Printf("\tadd rax, rdi\n")
 		case "-":
 			fmt.Printf("\tsub rax, rdi\n")
+		case "*":
+			fmt.Printf("\timul rax, rdi\n")
+		case "/":
+			fmt.Printf("\tcqo\n")
+			fmt.Printf("\tidiv rdi\n")
 		}
 		fmt.Printf("\tpush rax\n")
 		return

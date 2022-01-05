@@ -40,14 +40,30 @@ func parseExpression() expression {
 	return add()
 }
 
+// add = mul (("*" | "/") mul)*
 func add() expression {
-	ret := primary()
+	ret := mul()
 	for {
 		switch {
 		case consume("+"):
-			ret = &binary{op: "+", lhs: ret, rhs: primary()}
+			ret = &binary{op: "+", lhs: ret, rhs: mul()}
 		case consume("-"):
-			ret = &binary{op: "-", lhs: ret, rhs: primary()}
+			ret = &binary{op: "-", lhs: ret, rhs: mul()}
+		default:
+			return ret
+		}
+	}
+}
+
+// mul = primary (("*" | "/") primary)*
+func mul() expression {
+	ret := primary()
+	for {
+		switch {
+		case consume("*"):
+			ret = &binary{op: "*", lhs: ret, rhs: primary()}
+		case consume("/"):
+			ret = &binary{op: "/", lhs: ret, rhs: primary()}
 		default:
 			return ret
 		}
