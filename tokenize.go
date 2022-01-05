@@ -39,7 +39,7 @@ func tokenize() {
 			continue
 		}
 
-		if strings.Contains("+-*/", in[0:1]) {
+		if strings.Contains("+-*/()", in[0:1]) {
 			tokens = append(tokens, token{kind: tokenKindReserved, val: in[0:1]})
 			in = in[1:]
 			continue

@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 func advance() {
 	tokens = tokens[1:]
 }
@@ -10,6 +12,13 @@ func consume(s string) bool {
 		return true
 	}
 	return false
+}
+
+func expect(s string) {
+	if consume(s) {
+		return
+	}
+	panic(fmt.Sprintf("Unexpected token: %+v. want: %s", tokens[0], s))
 }
 
 type expression interface {
@@ -82,7 +91,15 @@ func parseUnary() expression {
 	}
 }
 
+// primary = "(" expression ")" | num
 func parsePrimary() expression {
+
+	if consume("(") {
+		ret := parseExpression()
+		expect(")")
+		return ret
+	}
+
 	return parseIntLit()
 }
 
