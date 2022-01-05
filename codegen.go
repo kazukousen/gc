@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func codegen(program []expression) {
+func codegen(program []statement) {
 
 	fmt.Printf(".intel_syntax noprefix\n")
 
@@ -11,18 +11,24 @@ func codegen(program []expression) {
 	fmt.Printf("main:\n")
 
 	for _, c := range program {
-		genExpr(c)
+		genStmt(c)
 		fmt.Printf("\tpop rax\n")
 	}
 
 	fmt.Printf("\tret\n")
 }
 
+func genStmt(stmt statement) {
+	switch s := stmt.(type) {
+	case *expressionStmt:
+		genExpr(s.child)
+	}
+}
+
 func genExpr(expr expression) {
 	switch e := expr.(type) {
 	case *intLit:
-		fmt.Printf("\tmov rax, %d\n", e.val)
-		fmt.Printf("\tpush rax\n")
+		fmt.Printf("\tpush %d\n", e.val)
 	case *binary:
 		genExpr(e.lhs)
 		genExpr(e.rhs)

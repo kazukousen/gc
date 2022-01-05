@@ -21,6 +21,19 @@ func expect(s string) {
 	panic(fmt.Sprintf("Unexpected token: %+v. want: %s", tokens[0], s))
 }
 
+// Statement
+
+type statement interface {
+	aStmt()
+}
+
+type expressionStmt struct {
+	statement
+	child expression
+}
+
+// Expressions
+
 type expression interface {
 	anExpr()
 }
@@ -37,20 +50,26 @@ type binary struct {
 	rhs expression
 }
 
-func parse() []expression {
-	var ret []expression
+func parse() []statement {
+	var ret []statement
 	for len(tokens) > 0 {
-		ret = append(ret, parseExpression())
+		ret = append(ret, parseStatement())
 	}
 	return ret
 }
 
-func parseExpression() expression {
-	return parseRelational()
+func parseStatement() statement {
+	ret := parseExpression()
+	expect(";")
+	return &expressionStmt{child: ret}
 }
 
-// relational = add ((">=" | "<=" | "==" | "!=") add)*
-func parseRelational() expression {
+func parseExpression() expression {
+	return parseRel()
+}
+
+// rel = add ((">=" | "<=" | "==" | "!=") add)*
+func parseRel() expression {
 	ret := parseAdd()
 	for {
 		switch {

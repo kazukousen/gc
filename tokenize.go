@@ -8,8 +8,10 @@ var tokens []token
 type tokenKind int
 
 const (
-	tokenKindNumber tokenKind = iota
-	tokenKindReserved
+	// https://go.dev/ref/spec#Tokens
+	// There are four classes: identifiers, keywords, operators and punctuation, and literals
+	tokenKindLiteral tokenKind = iota
+	tokenKindOperator
 )
 
 type token struct {
@@ -31,6 +33,39 @@ func toInt() int {
 	return ret
 }
 
+// a semicolon is automatically inserted into the token stream immediately
+// after a line's final token if that token is
+//
+// * an identifier
+// * an integer, floating*point, imaginary, rune, or string literal
+// * one of the keywords break, continue, fallthrough, or return
+// * one of the operators and punctuation ++, **, ), ], or }
+func autoInsertSemicolon() {
+
+	needed := func() bool {
+
+		finalTok := tokens[len(tokens)-1]
+
+		if finalTok.kind == tokenKindLiteral {
+			return true
+		}
+
+		if finalTok.kind == tokenKindOperator && finalTok.val == ")" {
+			return true
+		}
+
+		return false
+	}()
+
+	if needed {
+		addSemicolonToken()
+	}
+}
+
+func addSemicolonToken() {
+	tokens = append(tokens, token{kind: tokenKindOperator, val: ";"})
+}
+
 func tokenize() {
 	for len(in) > 0 {
 
@@ -39,22 +74,36 @@ func tokenize() {
 			continue
 		}
 
+		if in[0] == '\n' {
+			in = in[1:]
+			autoInsertSemicolon()
+			continue
+		}
+
+		if in[0] == ';' {
+			in = in[1:]
+			addSemicolonToken()
+			continue
+		}
+
 		if strings.Contains("+-*/()=<>!", in[0:1]) {
 			if len(in) > 1 && (in[0:2] == "<=" || in[0:2] == ">=" || in[0:2] == "==" || in[0:2] == "!=") {
-				tokens = append(tokens, token{kind: tokenKindReserved, val: in[0:2]})
+				tokens = append(tokens, token{kind: tokenKindOperator, val: in[0:2]})
 				in = in[2:]
 			} else {
-				tokens = append(tokens, token{kind: tokenKindReserved, val: in[0:1]})
+				tokens = append(tokens, token{kind: tokenKindOperator, val: in[0:1]})
 				in = in[1:]
 			}
 			continue
 		}
 
 		if isDigit() {
-			tokens = append(tokens, token{kind: tokenKindNumber, num: toInt()})
+			tokens = append(tokens, token{kind: tokenKindLiteral, num: toInt()})
 			continue
 		}
 
 		panic("unexpected character: " + string(in[0]))
 	}
+
+	autoInsertSemicolon()
 }

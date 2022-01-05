@@ -33,4 +33,6 @@ assert 1 '100 == 100'
 assert 0 '100 == 50'
 assert 1 '100 != 50'
 
+assert 2 '1; 2;'
+
 echo OK
