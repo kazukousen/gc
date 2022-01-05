@@ -21,18 +21,22 @@ assert() {
   fi
 }
 
-assert 0 '0'
-assert 42 '42'
-assert 48 '42 + 3+ 4-1'
-assert 12 '5 * 6 / 2 + 5 - 8'
-assert 10 '5 * -6 / 2 + -5 + 30'
-assert 160 '5 * (-6 / (2 + -5) + 30)'
-assert 1 '100 > 50'
-assert 0 '100 < 50'
-assert 1 '100 == 100'
-assert 0 '100 == 50'
-assert 1 '100 != 50'
+assert 0 'return 0'
+assert 42 'return 42'
+assert 48 'return 42 + 3+ 4-1'
+assert 12 'return 5 * 6 / 2 + 5 - 8'
+assert 10 'return 5 * -6 / 2 + -5 + 30'
+assert 160 'return 5 * (-6 / (2 + -5) + 30)'
+assert 1 'return 100 > 50'
+assert 0 'return 100 < 50'
+assert 1 'return 100 == 100'
+assert 0 'return 100 == 50'
+assert 1 'return 100 != 50'
 
-assert 2 '1; 2;'
+assert 2 '1; return 2;'
+assert 1 'return 1; 2;'
+
+assert 3 'return 1, 3;'
+assert 2 '(1 + 3) / 2; return'
 
 echo OK

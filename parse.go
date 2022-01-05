@@ -1,13 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func advance() {
 	tokens = tokens[1:]
 }
 
+func peek(s string) bool {
+	return len(tokens) > 0 && tokens[0].val == s
+}
+
 func consume(s string) bool {
-	if len(tokens) > 0 && tokens[0].val == s {
+	if peek(s) {
 		advance()
 		return true
 	}
@@ -27,9 +33,20 @@ type statement interface {
 	aStmt()
 }
 
+type returnStmt struct {
+	statement
+	child expression
+}
+
 type expressionStmt struct {
 	statement
 	child expression
+}
+
+type expressionList struct {
+	expression
+	first  expression
+	remain []expression
 }
 
 // Expressions
@@ -54,14 +71,42 @@ func parse() []statement {
 	var ret []statement
 	for len(tokens) > 0 {
 		ret = append(ret, parseStatement())
+		expect(";")
 	}
 	return ret
 }
 
+// Statement = ReturnStmt | ExpressionStmt .
 func parseStatement() statement {
+
+	if consume("return") {
+		// ReturnStmt = "return" [ ExpressionList ] .
+		if peek(";") {
+			return &returnStmt{}
+		}
+		ret := parseExpressionList()
+		return &returnStmt{child: ret}
+	}
+
+	// ExpressionStmt = Expression .
 	ret := parseExpression()
-	expect(";")
 	return &expressionStmt{child: ret}
+}
+
+// ExpressionList = Expression { "," Expression } .
+func parseExpressionList() expression {
+	first := parseExpression()
+
+	var remain []expression
+	for consume(",") {
+		remain = append(remain, parseExpression())
+	}
+
+	if len(remain) == 0 {
+		return first
+	}
+
+	return &expressionList{first: first, remain: remain}
 }
 
 func parseExpression() expression {

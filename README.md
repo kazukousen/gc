@@ -4,7 +4,9 @@
 
 ```
 StatementList  = { Statement ";" } .
-Statement      = ExpressionStmt .
+Statement      = ReturnStmt | ExpressionStmt .
+ReturnStmt     = "return" [ ExpressionList ] .
+ExpressionList = Expression { "," Expression } .
 ExpressionStmt = Expression .
 
 Expression = UnaryExpr | Expression binary_op Expression .
