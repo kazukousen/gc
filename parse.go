@@ -37,40 +37,52 @@ func parse() []expression {
 }
 
 func parseExpression() expression {
-	return add()
+	return parseAdd()
 }
 
 // add = mul (("*" | "/") mul)*
-func add() expression {
-	ret := mul()
+func parseAdd() expression {
+	ret := parseMul()
 	for {
 		switch {
 		case consume("+"):
-			ret = &binary{op: "+", lhs: ret, rhs: mul()}
+			ret = &binary{op: "+", lhs: ret, rhs: parseMul()}
 		case consume("-"):
-			ret = &binary{op: "-", lhs: ret, rhs: mul()}
+			ret = &binary{op: "-", lhs: ret, rhs: parseMul()}
 		default:
 			return ret
 		}
 	}
 }
 
-// mul = primary (("*" | "/") primary)*
-func mul() expression {
-	ret := primary()
+// mul = unary (("*" | "/") unary)*
+func parseMul() expression {
+	ret := parseUnary()
 	for {
 		switch {
 		case consume("*"):
-			ret = &binary{op: "*", lhs: ret, rhs: primary()}
+			ret = &binary{op: "*", lhs: ret, rhs: parseUnary()}
 		case consume("/"):
-			ret = &binary{op: "/", lhs: ret, rhs: primary()}
+			ret = &binary{op: "/", lhs: ret, rhs: parseUnary()}
 		default:
 			return ret
 		}
 	}
 }
 
-func primary() expression {
+// unary = ("+" | "-")? unary | primary
+func parseUnary() expression {
+	switch {
+	case consume("+"):
+		return parseUnary()
+	case consume("-"):
+		return &binary{op: "-", lhs: &intLit{val: 0}, rhs: parseUnary()}
+	default:
+		return parsePrimary()
+	}
+}
+
+func parsePrimary() expression {
 	return parseIntLit()
 }
 
