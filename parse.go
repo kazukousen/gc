@@ -4,16 +4,28 @@ func advance() {
 	tokens = tokens[1:]
 }
 
+func consume(s string) bool {
+	if len(tokens) > 0 && tokens[0].val == s {
+		advance()
+		return true
+	}
+	return false
+}
+
 type expression interface {
 	anExpr()
 }
 
 type intLit struct {
+	expression
 	val int
 }
 
-func (e *intLit) anExpr() {
-	panic("implement me")
+type binary struct {
+	expression
+	op  string
+	lhs expression
+	rhs expression
 }
 
 func parse() []expression {
@@ -25,6 +37,24 @@ func parse() []expression {
 }
 
 func parseExpression() expression {
+	return add()
+}
+
+func add() expression {
+	ret := primary()
+	for {
+		switch {
+		case consume("+"):
+			ret = &binary{op: "+", lhs: ret, rhs: primary()}
+		case consume("-"):
+			ret = &binary{op: "-", lhs: ret, rhs: primary()}
+		default:
+			return ret
+		}
+	}
+}
+
+func primary() expression {
 	return parseIntLit()
 }
 

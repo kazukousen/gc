@@ -1,5 +1,7 @@
 package main
 
+import "strings"
+
 var in string
 var tokens []token
 
@@ -7,10 +9,12 @@ type tokenKind int
 
 const (
 	tokenKindNumber tokenKind = iota
+	tokenKindReserved
 )
 
 type token struct {
 	kind tokenKind
+	val  string
 	num  int // for int
 }
 
@@ -31,6 +35,12 @@ func tokenize() {
 	for len(in) > 0 {
 
 		if in[0] == ' ' {
+			in = in[1:]
+			continue
+		}
+
+		if strings.Contains("+-", in[0:1]) {
+			tokens = append(tokens, token{kind: tokenKindReserved, val: in[0:1]})
 			in = in[1:]
 			continue
 		}

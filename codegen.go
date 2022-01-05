@@ -23,6 +23,18 @@ func genExpr(expr expression) {
 	case *intLit:
 		fmt.Printf("\tmov rax, %d\n", e.val)
 		fmt.Printf("\tpush rax\n")
+	case *binary:
+		genExpr(e.lhs)
+		genExpr(e.rhs)
+		fmt.Printf("\tpop rdi\n")
+		fmt.Printf("\tpop rax\n")
+		switch e.op {
+		case "+":
+			fmt.Printf("\tadd rax, rdi\n")
+		case "-":
+			fmt.Printf("\tsub rax, rdi\n")
+		}
+		fmt.Printf("\tpush rax\n")
 		return
 	}
 }
