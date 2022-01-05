@@ -38,6 +38,22 @@ func genExpr(expr expression) {
 		case "/":
 			fmt.Printf("\tcqo\n")
 			fmt.Printf("\tidiv rdi\n")
+		case "<":
+			fmt.Printf("\tcmp rax, rdi\n")
+			fmt.Printf("\tsetl al\n")
+			fmt.Printf("\tmovzb rax, al\n")
+		case "<=":
+			fmt.Printf("\tcmp rax, rdi\n")
+			fmt.Printf("\tsetle al\n")
+			fmt.Printf("\tmovzb rax, al\n")
+		case "==":
+			fmt.Printf("\tcmp rax, rdi\n")
+			fmt.Printf("\tsete al\n")
+			fmt.Printf("\tmovzb rax, al\n")
+		case "!=":
+			fmt.Printf("\tcmp rax, rdi\n")
+			fmt.Printf("\tsetne al\n")
+			fmt.Printf("\tmovzb rax, al\n")
 		}
 		fmt.Printf("\tpush rax\n")
 		return

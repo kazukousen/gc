@@ -39,9 +39,14 @@ func tokenize() {
 			continue
 		}
 
-		if strings.Contains("+-*/()", in[0:1]) {
-			tokens = append(tokens, token{kind: tokenKindReserved, val: in[0:1]})
-			in = in[1:]
+		if strings.Contains("+-*/()=<>!", in[0:1]) {
+			if len(in) > 1 && (in[0:2] == "<=" || in[0:2] == ">=" || in[0:2] == "==" || in[0:2] == "!=") {
+				tokens = append(tokens, token{kind: tokenKindReserved, val: in[0:2]})
+				in = in[2:]
+			} else {
+				tokens = append(tokens, token{kind: tokenKindReserved, val: in[0:1]})
+				in = in[1:]
+			}
 			continue
 		}
 

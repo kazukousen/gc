@@ -27,5 +27,10 @@ assert 48 '42 + 3+ 4-1'
 assert 12 '5 * 6 / 2 + 5 - 8'
 assert 10 '5 * -6 / 2 + -5 + 30'
 assert 160 '5 * (-6 / (2 + -5) + 30)'
+assert 1 '100 > 50'
+assert 0 '100 < 50'
+assert 1 '100 == 100'
+assert 0 '100 == 50'
+assert 1 '100 != 50'
 
 echo OK

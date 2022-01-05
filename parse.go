@@ -46,7 +46,32 @@ func parse() []expression {
 }
 
 func parseExpression() expression {
-	return parseAdd()
+	return parseRelational()
+}
+
+// relational = add ((">=" | "<=" | "==" | "!=") add)*
+func parseRelational() expression {
+	ret := parseAdd()
+	for {
+		switch {
+
+		case consume("<"):
+			ret = &binary{op: "<", lhs: ret, rhs: parseAdd()}
+		case consume(">"):
+			ret = &binary{op: "<", lhs: parseAdd(), rhs: ret}
+		case consume("<="):
+			ret = &binary{op: "<=", lhs: ret, rhs: parseAdd()}
+		case consume(">="):
+			ret = &binary{op: "<=", lhs: parseAdd(), rhs: ret}
+		case consume("=="):
+			ret = &binary{op: "==", lhs: ret, rhs: parseAdd()}
+		case consume("!="):
+			ret = &binary{op: "!=", lhs: ret, rhs: parseAdd()}
+		default:
+			return ret
+		}
+	}
+
 }
 
 // add = mul (("*" | "/") mul)*
