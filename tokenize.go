@@ -16,6 +16,7 @@ const (
 	tokenKindOperator
 	tokenKindKeyword
 	tokenKindIdentifier
+	tokenKindType
 )
 
 type token struct {
@@ -44,7 +45,7 @@ func tokenize() {
 			continue
 		}
 
-		if strings.Contains("+-*/()=<>!,{}", in[0:1]) {
+		if strings.Contains("+-*/()=<>!,{}&", in[0:1]) {
 			if len(in) > 1 && (in[0:2] == "<=" || in[0:2] == ">=" || in[0:2] == "==" || in[0:2] == "!=") {
 				tokens = append(tokens, &token{kind: tokenKindOperator, val: in[0:2]})
 				in = in[2:]
@@ -98,6 +99,9 @@ func identifierToken(val string) *token {
 	if inKeywords(val) {
 		return &token{kind: tokenKindKeyword, val: val}
 	}
+	if inTypes(val) {
+		return &token{kind: tokenKindType, val: val}
+	}
 	return &token{kind: tokenKindIdentifier, val: val}
 }
 
@@ -107,6 +111,13 @@ func inKeywords(val string) bool {
 		"for":    {},
 		"if":     {},
 		"else":   {},
+	}[val]
+	return ok
+}
+
+func inTypes(val string) bool {
+	_, ok := map[string]struct{}{
+		"int": {},
 	}[val]
 	return ok
 }
@@ -129,7 +140,7 @@ func autoInsertSemicolon() {
 		}
 
 		if finalTok.kind == tokenKindKeyword &&
-			inKeywords(finalTok.val) {
+			(finalTok.val == "return") {
 			return true
 		}
 

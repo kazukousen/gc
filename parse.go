@@ -27,13 +27,34 @@ func expect(s string) {
 	panic(fmt.Sprintf("Unexpected token: %+v. want: %s", tokens[0], s))
 }
 
-func consumeIdent() *token {
-	if len(tokens) > 0 && tokens[0].kind == tokenKindIdentifier {
+func consumeToken(tk tokenKind) *token {
+	if len(tokens) > 0 && tokens[0].kind == tk {
 		tok := tokens[0]
 		advance()
 		return tok
 	}
 	return nil
+}
+
+type program struct {
+	funcs []*function
+}
+
+type function struct {
+	name      string
+	body      statement
+	params    []*obj
+	locals    []*obj
+	stackSize int
+}
+
+func (f *function) assignLVarOffsets() {
+	offset := 0
+	for i := len(f.locals) - 1; i >= 0; i-- {
+		offset += 8
+		f.locals[i].offset = offset
+	}
+	f.stackSize = offset
 }
 
 // Statement
@@ -110,11 +131,27 @@ type obj struct {
 	offset int
 }
 
+type deref struct {
+	expression
+	child expression
+}
+
+type addr struct {
+	expression
+	child expression
+}
+
 var locals []*obj
 
-func findLocalVar(name string) *obj {
+func createLocalVar(name string) *obj {
+	lv := &obj{
+		name: name,
+	}
+	locals = append(locals, lv)
+	return lv
+}
 
-	// TODO: remove creating
+func findLocalVar(name string) *obj {
 
 	for i := range locals {
 		lv := locals[i]
@@ -123,20 +160,88 @@ func findLocalVar(name string) *obj {
 		}
 	}
 
-	lv := &obj{
-		name: name,
-	}
-	locals = append(locals, lv)
-	return lv
+	// TODO: remove creating
+	return createLocalVar(name)
 }
 
-func parse() []statement {
-	var ret []statement
+// TopLevelDecl = FunctionDecl .
+func parse() *program {
+	ret := &program{
+		funcs: make([]*function, 0),
+	}
 	for len(tokens) > 0 {
-		ret = append(ret, parseStatement())
+		expect("func")
+		ret.funcs = append(ret.funcs, parseFunction())
 		expect(";")
 	}
 	return ret
+}
+
+// FunctionDecl = "func" FunctionName Signature [ FunctionBody ] .
+// FunctionName = identifier .
+// FunctionBody = Block .
+func parseFunction() *function {
+
+	locals = []*obj{}
+
+	tok := consumeToken(tokenKindIdentifier)
+	if tok == nil {
+		panic("must be an identifier")
+	}
+
+	ret := &function{name: tok.val}
+
+	expect("(")
+	// Signature = Parameters [ Type ] .
+	ret.params = parseParameters()
+	// TODO: support void
+	parseType()
+
+	if !consume("{") {
+		return ret
+	}
+
+	ret.body = parseBlockStmt()
+	ret.locals = locals
+
+	ret.assignLVarOffsets()
+
+	return ret
+}
+
+// Parameters = "(" [ ParameterList ] ")" .
+func parseParameters() []*obj {
+
+	var params []*obj
+
+	if consume(")") {
+		return params
+	}
+
+	params = parseParameterList()
+	expect(")")
+
+	return params
+}
+
+// ParameterList  = ParameterDecl { "," ParameterDecl } .
+func parseParameterList() []*obj {
+	var ret []*obj
+	for i := 0; i == 0 || consume(","); i++ {
+		ret = append(ret, parseParameterDecl()...)
+	}
+	return ret
+}
+
+// ParameterDecl  = [ IdentifierList ] Type .
+func parseParameterDecl() []*obj {
+	ids := parseIdentifierList()
+	parseType()
+	return ids
+}
+
+func parseType() {
+	expect("int")
 }
 
 // Statement = ReturnStmt | SimpleStmt .
@@ -145,7 +250,7 @@ func parseStatement() statement {
 	// return
 	if consume("return") {
 		// ReturnStmt = "return" [ ExpressionList ] .
-		if peek(";") {
+		if peek("}") {
 			return &returnStmt{}
 		}
 		ret := parseExpressionList()
@@ -283,6 +388,24 @@ func parseExpressionList() []expression {
 	return ret
 }
 
+func parseIdentifierList() []*obj {
+	var ret []*obj
+	tok := consumeToken(tokenKindIdentifier)
+	if tok == nil {
+		return ret
+	}
+	ret = append(ret, createLocalVar(tok.val))
+
+	for consume(",") {
+		tok := consumeToken(tokenKindIdentifier)
+		if tok == nil {
+			panic(fmt.Sprintf("Expect an identifier: %+v", tokens[0]))
+		}
+		ret = append(ret, createLocalVar(tok.val))
+	}
+	return ret
+}
+
 func parseExpression() expression {
 	return parseRel()
 }
@@ -309,7 +432,6 @@ func parseRel() expression {
 			return ret
 		}
 	}
-
 }
 
 // add = mul (("*" | "/") mul)*
@@ -342,13 +464,17 @@ func parseMul() expression {
 	}
 }
 
-// unary = ("+" | "-")? unary | primary
+// unary = ("+" | "-" | "*" | "&")? unary | primary
 func parseUnary() expression {
 	switch {
 	case consume("+"):
 		return parseUnary()
 	case consume("-"):
 		return &binary{op: "-", lhs: &intLit{val: 0}, rhs: parseUnary()}
+	case consume("*"):
+		return &deref{child: parseUnary()}
+	case consume("&"):
+		return &addr{child: parseUnary()}
 	default:
 		return parsePrimary()
 	}
@@ -371,7 +497,7 @@ func parseOperand() expression {
 	}
 
 	// identifier
-	if tok := consumeIdent(); tok != nil {
+	if tok := consumeToken(tokenKindIdentifier); tok != nil {
 		lv := findLocalVar(tok.val)
 
 		if consume("(") {

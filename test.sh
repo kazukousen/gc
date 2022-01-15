@@ -31,61 +31,72 @@ assert() {
   fi
 }
 
-assert 0 'return 0'
-assert 42 'return 42'
-assert 48 'return 42 + 3+ 4-1'
-assert 12 'return 5 * 6 / 2 + 5 - 8'
-assert 10 'return 5 * -6 / 2 + -5 + 30'
-assert 160 'return 5 * (-6 / (2 + -5) + 30)'
-assert 1 'return 100 > 50'
-assert 0 'return 100 < 50'
-assert 1 'return 100 == 100'
-assert 0 'return 100 == 50'
-assert 1 'return 100 != 50'
+assert 0 'func main() int {return 0}'
+assert 42 'func main() int {return 42}'
+assert 48 'func main() int{return 42 + 3+ 4-1}'
+assert 12 'func main() int {return 5 * 6 / 2 + 5 - 8}'
+assert 10 'func main() int {return 5 * -6 / 2 + -5 + 30}'
+assert 160 'func main() int {return 5 * (-6 / (2 + -5) + 30)}'
+assert 1 'func main() int{return 100 > 50}'
+assert 0 'func main() int {return 100 < 50}'
+assert 1 'func main() int {return 100 == 100}'
+assert 0 'func main() int { return 100 == 50 }'
+assert 1 'func main() int { return 100 != 50 }'
 
-assert 2 '1; return 2;'
-assert 1 'return 1; 2;'
-assert 3 'return 1, 3;'
-assert 2 '(1 + 3) / 2; return'
+assert 2 'func main() int { 1; return 2; }'
+assert 1 'func main() int { return 1; 2; }'
+assert 3 'func main() int { return 1, 3; }'
+assert 2 'func main() int { return (1 + 3) / 2 }'
 
 echo "local variables"
 echo ""
-assert 5 'a = 5; return a;'
-assert 3 'foo=3; return foo;'
-assert 8 'foo123=3; bar=5; return foo123+bar;'
+assert 5 'func main() int { a = 5; return a; }'
+assert 3 'func main() int { foo=3; return foo; }'
+assert 8 'func main() int { foo123=3; bar=5; return foo123+bar; }'
 echo ""
 
 echo "blocks"
 echo ""
-assert 5 '{a = 5; return a}'
+assert 5 'func main() int { {a = 5; return a} }'
 echo ""
 
 echo "if"
 echo ""
-assert 5 '{ i = 5; if i == 5 { return i}; return 0; }'
-assert 5 '{ i = 5; if i == 5 { return i} else { return 3} }'
-assert 3 '{ i = 3; if i == 5 { return i} else { return 3} }'
-assert 3 '{ i = 3; if i == 5 { return i} else if i == 3 { return 3} }'
-assert 3 '{ i = 1; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i }'
-assert 4 '{ i = 4; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i }'
+assert 5 'func main() int { { i = 5; if i == 5 { return i}; return 0; } }'
+assert 5 'func main() int { { i = 5; if i == 5 { return i} else { return 3} } }'
+assert 3 'func main() int { { i = 3; if i == 5 { return i} else { return 3} } }'
+assert 3 'func main() int { { i = 3; if i == 5 { return i} else if i == 3 { return 3} } }'
+assert 3 'func main() int { { i = 1; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i } }'
+assert 4 'func main() int { { i = 4; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i } }'
 echo ""
 
 echo "for"
 echo ""
-assert 55 '{ i=0; j=0; for i=0; i<=10; i=i+1 { j=i+j }; return j; }'
-assert 55 '{ i=0; j=0; for ; i<=10; i=i+1 { j=i+j }; return j; }'
-assert 55 '{ i=0; j=0; for ; i<=10; { j=i+j; i=i+1 }; return j; }'
-assert 55 '{ i=0; j=0; for i<=10 { j=i+j; i=i+1 }; return j; }'
-assert 3 '{ for {return 3;} return 5; }'
+assert 55 'func main() int { { i=0; j=0; for i=0; i<=10; i=i+1 { j=i+j }; return j; } }'
+assert 55 'func main() int { { i=0; j=0; for ; i<=10; i=i+1 { j=i+j }; return j; } }'
+assert 55 'func main() int { { i=0; j=0; for ; i<=10; { j=i+j; i=i+1 }; return j; } }'
+assert 55 'func main() int { { i=0; j=0; for i<=10 { j=i+j; i=i+1 }; return j; } }'
+assert 3 'func main() int { { for {return 3;} return 5; } }'
 echo ""
 
 echo "function call"
 echo ""
-assert 3 '{return ret3()}'
-assert 5 '{return ret5();}'
-assert 8 'return add(3, 5);'
-assert 3 'return sub(5, 2);'
-assert 21 'return add6(1,2,3,4,5,6);'
+assert 3 'func main() int { {return ret3()} }'
+assert 5 'func main() int { {return ret5();} }'
+assert 8 'func main() int { return add(3, 5); }'
+assert 3 'func main() int { return sub(5, 2); }'
+assert 21 'func main() int { return add6(1,2,3,4,5,6); }'
+echo ""
+
+echo "pointer"
+echo ""
+assert 3 'func main() int { { x=3; return *&x; } }'
+assert 3 'func main() int { { x=3; y=&x; z=&y; return **z; } }'
+echo ""
+
+echo "function"
+echo ""
+assert 32 'func main() int { return ret32() }; func ret32() int { return 32; }'
 echo ""
 
 echo OK

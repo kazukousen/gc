@@ -4,31 +4,27 @@ import "fmt"
 
 var argRegisters64 = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
 
-func codegen(program []statement) {
-
-	offset := 0
-	for i := len(locals) - 1; i >= 0; i-- {
-		offset += 8
-		locals[i].offset = offset
-	}
+func codegen(prog *program) {
 
 	fmt.Printf(".intel_syntax noprefix\n")
 
 	fmt.Printf("\t.text\n")
-	fmt.Printf("\t.globl main\n")
-	fmt.Printf("main:\n")
-	fmt.Printf("\tpush rbp\n")
-	fmt.Printf("\tmov rbp, rsp\n")
-	fmt.Printf("\tsub rsp, %d\n", offset)
 
-	for _, c := range program {
-		genStmt(c)
+	for _, f := range prog.funcs {
+		fmt.Printf("\t.globl %s\n", f.name)
+		fmt.Printf("%s:\n", f.name)
+		fmt.Printf("\tpush rbp\n")
+		fmt.Printf("\tmov rbp, rsp\n")
+
+		fmt.Printf("\tsub rsp, %d\n", f.stackSize)
+
+		genStmt(f.body)
+
+		fmt.Printf(".Lreturn.%s:\n", f.name)
+		fmt.Printf("\tmov rsp, rbp\n")
+		fmt.Printf("\tpop rbp\n")
+		fmt.Printf("\tret\n")
 	}
-
-	fmt.Printf(".Lreturn.main:\n")
-	fmt.Printf("\tmov rsp, rbp\n")
-	fmt.Printf("\tpop rbp\n")
-	fmt.Printf("\tret\n")
 }
 
 var labelCnt = 0
@@ -110,6 +106,11 @@ func genExpr(expr expression) {
 	case *obj:
 		genAddr(e)
 		load()
+	case *deref:
+		genExpr(e.child)
+		load()
+	case *addr:
+		genAddr(e.child)
 	case *binary:
 		genExpr(e.lhs)
 		genExpr(e.rhs)
