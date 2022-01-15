@@ -43,4 +43,9 @@ echo ""
 echo ""
 assert 5 'a = 5; return a;'
 
+echo "blocks"
+echo ""
+echo ""
+assert 5 '{a = 5; return a}'
+
 echo OK

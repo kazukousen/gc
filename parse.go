@@ -42,6 +42,11 @@ type statement interface {
 	aStmt()
 }
 
+type blockStmt struct {
+	statement
+	stmts []statement
+}
+
 type returnStmt struct {
 	statement
 	child expression
@@ -127,6 +132,15 @@ func parseStatement() statement {
 		}
 		ret := parseExpressionList()
 		return &returnStmt{child: ret}
+	}
+
+	if consume("{") {
+		// Block = "{" StatementList "}" .
+		var stmts []statement
+		for !consume("}") {
+			stmts = append(stmts, parseStatement())
+		}
+		return &blockStmt{stmts: stmts}
 	}
 
 	return parseSimpleStmt()

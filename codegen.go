@@ -37,6 +37,10 @@ func genStmt(stmt statement) {
 			fmt.Printf("\tpop rax\n")
 		}
 		fmt.Printf("\tjmp .Lreturn.main\n")
+	case *blockStmt:
+		for _, s := range s.stmts {
+			genStmt(s)
+		}
 	case *expressionStmt:
 		genExpr(s.child)
 	case *assignment:

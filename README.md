@@ -3,6 +3,7 @@
 ## Grammars
 
 ```
+Block          = "{" StatementList "}" .
 StatementList  = { Statement ";" } .
 Statement      = ReturnStmt | SimpleStmt .
 ReturnStmt     = "return" [ ExpressionList ] .
