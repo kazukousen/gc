@@ -35,8 +35,12 @@ assert 1 'return 100 != 50'
 
 assert 2 '1; return 2;'
 assert 1 'return 1; 2;'
-
 assert 3 'return 1, 3;'
 assert 2 '(1 + 3) / 2; return'
+
+echo "local variables"
+echo ""
+echo ""
+assert 5 'a = 5; return a;'
 
 echo OK

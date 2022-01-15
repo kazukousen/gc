@@ -27,6 +27,15 @@ func expect(s string) {
 	panic(fmt.Sprintf("Unexpected token: %+v. want: %s", tokens[0], s))
 }
 
+func consumeIdent() *token {
+	if len(tokens) > 0 && tokens[0].kind == tokenKindIdentifier {
+		tok := tokens[0]
+		advance()
+		return tok
+	}
+	return nil
+}
+
 // Statement
 
 type statement interface {
@@ -49,6 +58,12 @@ type expressionList struct {
 	remain []expression
 }
 
+type assignment struct {
+	statement
+	lhs expression
+	rhs expression
+}
+
 // Expressions
 
 type expression interface {
@@ -67,6 +82,32 @@ type binary struct {
 	rhs expression
 }
 
+type obj struct {
+	expression
+	name   string
+	offset int
+}
+
+var locals []*obj
+
+func findLocalVar(name string) *obj {
+
+	// TODO: remove creating
+
+	for i := range locals {
+		lv := locals[i]
+		if lv.name == name {
+			return lv
+		}
+	}
+
+	lv := &obj{
+		name: name,
+	}
+	locals = append(locals, lv)
+	return lv
+}
+
 func parse() []statement {
 	var ret []statement
 	for len(tokens) > 0 {
@@ -76,7 +117,7 @@ func parse() []statement {
 	return ret
 }
 
-// Statement = ReturnStmt | ExpressionStmt .
+// Statement = ReturnStmt | SimpleStmt .
 func parseStatement() statement {
 
 	if consume("return") {
@@ -88,9 +129,18 @@ func parseStatement() statement {
 		return &returnStmt{child: ret}
 	}
 
-	// ExpressionStmt = Expression .
-	ret := parseExpression()
-	return &expressionStmt{child: ret}
+	return parseSimpleStmt()
+}
+
+func parseSimpleStmt() statement {
+	expr := parseExpression()
+
+	if consume("=") {
+		// Assignment
+		return &assignment{lhs: expr, rhs: parseExpression()}
+	}
+
+	return &expressionStmt{child: expr}
 }
 
 // ExpressionList = Expression { "," Expression } .
@@ -180,13 +230,18 @@ func parseUnary() expression {
 	}
 }
 
-// primary = "(" expression ")" | num
+// primary = "(" expression ")" | ident | num
 func parsePrimary() expression {
 
 	if consume("(") {
 		ret := parseExpression()
 		expect(")")
 		return ret
+	}
+
+	if tok := consumeIdent(); tok != nil {
+		lv := findLocalVar(tok.val)
+		return lv
 	}
 
 	return parseIntLit()

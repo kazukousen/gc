@@ -4,6 +4,12 @@ import "fmt"
 
 func codegen(program []statement) {
 
+	offset := 0
+	for i := len(locals) - 1; i >= 0; i-- {
+		offset += 8
+		locals[i].offset = offset
+	}
+
 	fmt.Printf(".intel_syntax noprefix\n")
 
 	fmt.Printf("\t.text\n")
@@ -11,7 +17,7 @@ func codegen(program []statement) {
 	fmt.Printf("main:\n")
 	fmt.Printf("\tpush rbp\n")
 	fmt.Printf("\tmov rbp, rsp\n")
-	fmt.Printf("\tsub rsp, 0\n")
+	fmt.Printf("\tsub rsp, %d\n", offset)
 
 	for _, c := range program {
 		genStmt(c)
@@ -33,6 +39,10 @@ func genStmt(stmt statement) {
 		fmt.Printf("\tjmp .Lreturn.main\n")
 	case *expressionStmt:
 		genExpr(s.child)
+	case *assignment:
+		genAddr(s.lhs)
+		genExpr(s.rhs)
+		store()
 	}
 }
 
@@ -45,6 +55,9 @@ func genExpr(expr expression) {
 		}
 	case *intLit:
 		fmt.Printf("\tpush %d\n", e.val)
+	case *obj:
+		genAddr(e)
+		load()
 	case *binary:
 		genExpr(e.lhs)
 		genExpr(e.rhs)
@@ -79,5 +92,27 @@ func genExpr(expr expression) {
 		}
 		fmt.Printf("\tpush rax\n")
 		return
+	}
+}
+
+func load() {
+	fmt.Printf("\tpop rax\n")
+	fmt.Printf("\tmov rax, [rax]\n")
+	fmt.Printf("\tpush rax\n")
+}
+
+func store() {
+	fmt.Printf("\tpop rdi\n")
+	fmt.Printf("\tpop rax\n")
+	fmt.Printf("\tmov [rax], rdi\n")
+}
+
+func genAddr(expr expression) {
+	switch e := expr.(type) {
+	case *obj:
+		fmt.Printf("\tlea rax, [rbp-%d]\n", e.offset)
+		fmt.Printf("\tpush rax\n")
+	default:
+		panic("not a value")
 	}
 }
