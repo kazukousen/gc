@@ -44,7 +44,7 @@ type statement interface {
 
 type returnStmt struct {
 	statement
-	child expression
+	children []expression
 }
 
 type blockStmt struct {
@@ -74,12 +74,6 @@ type expressionStmt struct {
 	child expression
 }
 
-type expressionList struct {
-	expression
-	first  expression
-	remain []expression
-}
-
 type assignment struct {
 	statement
 	lhs expression
@@ -90,6 +84,12 @@ type assignment struct {
 
 type expression interface {
 	anExpr()
+}
+
+type funcCall struct {
+	expression
+	name string
+	args []expression
 }
 
 type intLit struct {
@@ -149,7 +149,7 @@ func parseStatement() statement {
 			return &returnStmt{}
 		}
 		ret := parseExpressionList()
-		return &returnStmt{child: ret}
+		return &returnStmt{children: ret}
 	}
 
 	// block
@@ -272,19 +272,15 @@ func parseSimpleStmt() statement {
 }
 
 // ExpressionList = Expression { "," Expression } .
-func parseExpressionList() expression {
-	first := parseExpression()
+func parseExpressionList() []expression {
 
-	var remain []expression
+	ret := []expression{parseExpression()}
+
 	for consume(",") {
-		remain = append(remain, parseExpression())
+		ret = append(ret, parseExpression())
 	}
 
-	if len(remain) == 0 {
-		return first
-	}
-
-	return &expressionList{first: first, remain: remain}
+	return ret
 }
 
 func parseExpression() expression {
@@ -358,21 +354,50 @@ func parseUnary() expression {
 	}
 }
 
-// primary = "(" expression ")" | ident | num
+// PrimaryExpr = Operand .
 func parsePrimary() expression {
 
+	expr := parseOperand()
+
+	return expr
+}
+
+// Operand = Literal | identifier [ Arguments ] | "(" Expression ")" .
+func parseOperand() expression {
 	if consume("(") {
 		ret := parseExpression()
 		expect(")")
 		return ret
 	}
 
+	// identifier
 	if tok := consumeIdent(); tok != nil {
 		lv := findLocalVar(tok.val)
+
+		if consume("(") {
+			return parseArguments(tok.val)
+		}
+
 		return lv
 	}
 
+	// Literal
 	return parseIntLit()
+}
+
+// Arguments = "(" [ ExpressionList [ "..." ] [ "," ] ] ")" .
+func parseArguments(name string) expression {
+
+	ret := &funcCall{name: name}
+
+	if consume(")") {
+		return ret
+	}
+
+	ret.args = parseExpressionList()
+	expect(")")
+
+	return ret
 }
 
 func parseIntLit() expression {

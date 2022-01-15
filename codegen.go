@@ -2,6 +2,8 @@ package main
 
 import "fmt"
 
+var argRegisters64 = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
+
 func codegen(program []statement) {
 
 	offset := 0
@@ -34,10 +36,10 @@ var labelCnt = 0
 func genStmt(stmt statement) {
 	switch s := stmt.(type) {
 	case *returnStmt:
-		if s.child != nil {
-			genExpr(s.child)
-			fmt.Printf("\tpop rax\n")
+		for _, child := range s.children {
+			genExpr(child)
 		}
+		fmt.Printf("\tpop rax\n")
 		fmt.Printf("\tjmp .Lreturn.main\n")
 	case *blockStmt:
 		for _, s := range s.stmts {
@@ -92,11 +94,17 @@ func genStmt(stmt statement) {
 
 func genExpr(expr expression) {
 	switch e := expr.(type) {
-	case *expressionList:
-		genExpr(e.first)
-		for _, e := range e.remain {
-			genExpr(e)
+	case *funcCall:
+		for _, arg := range e.args {
+			genExpr(arg)
 		}
+
+		for i := len(e.args) - 1; i >= 0; i-- {
+			fmt.Printf("\tpop %s\n", argRegisters64[i])
+		}
+
+		fmt.Printf("\tcall %s\n", e.name)
+		fmt.Printf("\tpush rax\n")
 	case *intLit:
 		fmt.Printf("\tpush %d\n", e.val)
 	case *obj:
