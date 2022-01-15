@@ -104,6 +104,7 @@ func identifierToken(val string) *token {
 func inKeywords(val string) bool {
 	_, ok := map[string]struct{}{
 		"return": {},
+		"for":    {},
 	}[val]
 	return ok
 }

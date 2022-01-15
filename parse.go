@@ -42,14 +42,23 @@ type statement interface {
 	aStmt()
 }
 
+type returnStmt struct {
+	statement
+	child expression
+}
+
 type blockStmt struct {
 	statement
 	stmts []statement
 }
 
-type returnStmt struct {
+type forStmt struct {
 	statement
-	child expression
+	cond expression
+	init statement
+	post statement
+
+	body statement
 }
 
 type expressionStmt struct {
@@ -125,6 +134,7 @@ func parse() []statement {
 // Statement = ReturnStmt | SimpleStmt .
 func parseStatement() statement {
 
+	// return
 	if consume("return") {
 		// ReturnStmt = "return" [ ExpressionList ] .
 		if peek(";") {
@@ -134,16 +144,73 @@ func parseStatement() statement {
 		return &returnStmt{child: ret}
 	}
 
+	// block
 	if consume("{") {
-		// Block = "{" StatementList "}" .
-		var stmts []statement
-		for !consume("}") {
-			stmts = append(stmts, parseStatement())
-		}
-		return &blockStmt{stmts: stmts}
+		return parseBlockStmt()
+	}
+
+	// for
+	if consume("for") {
+		return parseForStmt()
 	}
 
 	return parseSimpleStmt()
+}
+
+// Block = "{" StatementList "}" .
+func parseBlockStmt() statement {
+	var stmts []statement
+	for !consume("}") {
+		stmts = append(stmts, parseStatement())
+	}
+	return &blockStmt{stmts: stmts}
+}
+
+// ForStmt    = "for" [ Condition | ForClause ] Block .
+// Condition  = Expression .
+// ForClause  = [ InitStmt ] ";" [ Condition ] ";" [ PostStmt ] .
+// InitStmt   = SimpleStmt .
+// PostStmt   = SimpleStmt .
+func parseForStmt() statement {
+	if consume("{") {
+		return &forStmt{body: parseBlockStmt()}
+	}
+
+	var cond expression
+	var init statement
+	var post statement
+	if !consume(";") {
+
+		tmp := parseSimpleStmt()
+		if t, ok := tmp.(*expressionStmt); ok {
+			cond = t.child
+			expect("{")
+			return &forStmt{
+				cond: cond,
+				body: parseBlockStmt(),
+			}
+		}
+
+		init = tmp
+		expect(";")
+	}
+
+	if !consume(";") {
+		cond = parseExpression()
+		expect(";")
+	}
+
+	if !consume("{") {
+		post = parseSimpleStmt()
+		expect("{")
+	}
+
+	return &forStmt{
+		cond: cond,
+		init: init,
+		post: post,
+		body: parseBlockStmt(),
+	}
 }
 
 func parseSimpleStmt() statement {

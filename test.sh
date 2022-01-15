@@ -42,10 +42,21 @@ echo "local variables"
 echo ""
 echo ""
 assert 5 'a = 5; return a;'
+assert 3 'foo=3; return foo;'
+assert 8 'foo123=3; bar=5; return foo123+bar;'
 
 echo "blocks"
 echo ""
 echo ""
 assert 5 '{a = 5; return a}'
+
+echo "for"
+echo ""
+echo ""
+assert 55 '{ i=0; j=0; for i=0; i<=10; i=i+1 { j=i+j }; return j; }'
+assert 55 '{ i=0; j=0; for ; i<=10; i=i+1 { j=i+j }; return j; }'
+assert 55 '{ i=0; j=0; for ; i<=10; { j=i+j; i=i+1 }; return j; }'
+assert 55 '{ i=0; j=0; for i<=10 { j=i+j; i=i+1 }; return j; }'
+assert 3 '{ for {return 3;} return 5; }'
 
 echo OK

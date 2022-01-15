@@ -29,6 +29,8 @@ func codegen(program []statement) {
 	fmt.Printf("\tret\n")
 }
 
+var labelCnt = 0
+
 func genStmt(stmt statement) {
 	switch s := stmt.(type) {
 	case *returnStmt:
@@ -41,6 +43,25 @@ func genStmt(stmt statement) {
 		for _, s := range s.stmts {
 			genStmt(s)
 		}
+	case *forStmt:
+		labelCnt++
+		if s.init != nil {
+			genStmt(s.init)
+		}
+		fmt.Printf(".Lbegin%d:\n", labelCnt)
+		if s.cond != nil {
+			genExpr(s.cond)
+			fmt.Printf("	pop rax\n")
+			fmt.Printf("	cmp rax, 0\n")
+			fmt.Printf("	je .Lend%d\n", labelCnt)
+		}
+		genStmt(s.body)
+		if s.post != nil {
+			genStmt(s.post)
+		}
+		fmt.Printf("	jmp .Lbegin%d\n", labelCnt)
+		fmt.Printf(".Lend%d:\n", labelCnt)
+		return
 	case *expressionStmt:
 		genExpr(s.child)
 	case *assignment:
