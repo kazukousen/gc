@@ -4,13 +4,15 @@
 
 ```
 StatementList  = { Statement ";" } .
-Statement      = ReturnStmt | Block | ForStmt | SimpleStmt .
+Statement      = ReturnStmt | Block | IfStmt | ForStmt | SimpleStmt .
 ReturnStmt     = "return" [ ExpressionList ] .
 Block          = "{" StatementList "}" .
 ExpressionList = Expression { "," Expression } .
 SimpleStmt     = ExpressionStmt | Assignment .
 ExpressionStmt = Expression .
 Assignment     = Expression assign_op Expression .
+
+IfStmt = "if" [ SimpleStmt ";" ] Expression Block [ "else" ( IfStmt | Block ) ] .
 
 ForStmt    = "for" [ Condition | ForClause ] Block .
 Condition  = Expression .

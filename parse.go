@@ -52,6 +52,14 @@ type blockStmt struct {
 	stmts []statement
 }
 
+type ifStmt struct {
+	statement
+	init statement
+	cond expression
+	then statement
+	els  statement
+}
+
 type forStmt struct {
 	statement
 	cond expression
@@ -149,6 +157,11 @@ func parseStatement() statement {
 		return parseBlockStmt()
 	}
 
+	// if
+	if consume("if") {
+		return parseIfStmt()
+	}
+
 	// for
 	if consume("for") {
 		return parseForStmt()
@@ -164,6 +177,40 @@ func parseBlockStmt() statement {
 		stmts = append(stmts, parseStatement())
 	}
 	return &blockStmt{stmts: stmts}
+}
+
+// IfStmt = "if" [ SimpleStmt ";" ] Expression Block [ "else" ( IfStmt | Block ) ] .
+func parseIfStmt() statement {
+	var cond expression
+	var init statement
+	tmp := parseSimpleStmt()
+	if t, ok := tmp.(*expressionStmt); ok {
+		cond = t.child
+	} else {
+		init = tmp
+		cond = parseExpression()
+	}
+
+	expect("{")
+	then := parseBlockStmt()
+
+	ret := &ifStmt{
+		init: init,
+		cond: cond,
+		then: then,
+	}
+
+	if !consume("else") {
+		return ret
+	}
+
+	if consume("{") {
+		ret.els = parseBlockStmt()
+	} else if consume("if") {
+		ret.els = parseIfStmt()
+	}
+
+	return ret
 }
 
 // ForStmt    = "for" [ Condition | ForClause ] Block .

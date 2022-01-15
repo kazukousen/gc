@@ -105,6 +105,8 @@ func inKeywords(val string) bool {
 	_, ok := map[string]struct{}{
 		"return": {},
 		"for":    {},
+		"if":     {},
+		"else":   {},
 	}[val]
 	return ok
 }

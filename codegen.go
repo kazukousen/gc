@@ -43,25 +43,44 @@ func genStmt(stmt statement) {
 		for _, s := range s.stmts {
 			genStmt(s)
 		}
+	case *ifStmt:
+		labelCnt++
+		cnt := labelCnt
+		genExpr(s.cond)
+		fmt.Printf("\tpop rax\n")
+		fmt.Printf("\tcmp rax, 0\n")
+
+		if s.els != nil {
+			fmt.Printf("\tje .Lelse%d\n", cnt)
+			genStmt(s.then)
+			fmt.Printf("\tjmp .Lend%d\n", cnt)
+			fmt.Printf(".Lelse%d:\n", cnt)
+			genStmt(s.els)
+			fmt.Printf(".Lend%d:\n", cnt)
+		} else {
+			fmt.Printf("\tje .Lend%d\n", cnt)
+			genStmt(s.then)
+			fmt.Printf(".Lend%d:\n", cnt)
+		}
 	case *forStmt:
 		labelCnt++
+		cnt := labelCnt
 		if s.init != nil {
 			genStmt(s.init)
 		}
-		fmt.Printf(".Lbegin%d:\n", labelCnt)
+		fmt.Printf(".Lbegin%d:\n", cnt)
 		if s.cond != nil {
 			genExpr(s.cond)
-			fmt.Printf("	pop rax\n")
-			fmt.Printf("	cmp rax, 0\n")
-			fmt.Printf("	je .Lend%d\n", labelCnt)
+			fmt.Printf("\tpop rax\n")
+			fmt.Printf("\tcmp rax, 0\n")
+			fmt.Printf("\tje .Lend%d\n", cnt)
 		}
 		genStmt(s.body)
 		if s.post != nil {
 			genStmt(s.post)
 		}
-		fmt.Printf("	jmp .Lbegin%d\n", labelCnt)
-		fmt.Printf(".Lend%d:\n", labelCnt)
-		return
+		fmt.Printf("\tjmp .Lbegin%d\n", cnt)
+		fmt.Printf(".Lend%d:\n", cnt)
 	case *expressionStmt:
 		genExpr(s.child)
 	case *assignment:
