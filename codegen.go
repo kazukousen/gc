@@ -91,9 +91,11 @@ func genStmt(stmt statement) {
 	case *expressionStmt:
 		genExpr(s.child)
 	case *assignment:
-		genAddr(s.lhs)
-		genExpr(s.rhs)
-		store()
+		for i := range s.lhs {
+			genAddr(s.lhs[i])
+			genExpr(s.rhs[i])
+			store()
+		}
 	}
 }
 

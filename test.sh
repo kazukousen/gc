@@ -50,33 +50,34 @@ assert 2 'func main() int { return (1 + 3) / 2 }'
 
 echo "local variables"
 echo ""
-assert 5 'func main() int { a = 5; return a; }'
-assert 3 'func main() int { foo=3; return foo; }'
-assert 8 'func main() int { foo123=3; bar=5; return foo123+bar; }'
+assert 5 'func main() int { var a = 5; return a; }'
+assert 3 'func main() int { var foo=3; return foo; }'
+assert 8 'func main() int { var foo123=3; var bar=5; return foo123+bar; }'
+assert 8 'func main() int { var foo123, bar = 3, 5; return foo123+bar; }'
 echo ""
 
 echo "blocks"
 echo ""
-assert 5 'func main() int { {a = 5; return a} }'
+assert 5 'func main() int { {var a = 5; return a} }'
 echo ""
 
 echo "if"
 echo ""
-assert 5 'func main() int { { i = 5; if i == 5 { return i}; return 0; } }'
-assert 5 'func main() int { { if i = 5; i == 5 { return i}; return 0; } }'
-assert 5 'func main() int { { i = 5; if i == 5 { return i} else { return 3} } }'
-assert 3 'func main() int { { i = 3; if i == 5 { return i} else { return 3} } }'
-assert 3 'func main() int { { i = 3; if i == 5 { return i} else if i == 3 { return 3} } }'
-assert 3 'func main() int { { i = 1; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i } }'
-assert 4 'func main() int { { i = 4; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i } }'
+assert 5 'func main() int { {var i = 5; if i == 5 { return i}; return 0; } }'
+assert 5 'func main() int { { if i := 5; i == 5 { return i}; return 0; } }'
+assert 5 'func main() int { {var i = 5; if i == 5 { return i} else { return 3} } }'
+assert 3 'func main() int { {var i = 3; if i == 5 { return i} else { return 3} } }'
+assert 3 'func main() int { {var i = 3; if i == 5 { return i} else if i == 3 { return 3} } }'
+assert 3 'func main() int { { i := 1; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i } }'
+assert 4 'func main() int { { i := 4; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i } }'
 echo ""
 
 echo "for"
 echo ""
-assert 55 'func main() int { { i=0; j=0; for i=0; i<=10; i=i+1 { j=i+j }; return j; } }'
-assert 55 'func main() int { { i=0; j=0; for ; i<=10; i=i+1 { j=i+j }; return j; } }'
-assert 55 'func main() int { { i=0; j=0; for ; i<=10; { j=i+j; i=i+1 }; return j; } }'
-assert 55 'func main() int { { i=0; j=0; for i<=10 { j=i+j; i=i+1 }; return j; } }'
+assert 55 'func main() int { { i:=0; j:=0; for i=0; i<=10; i=i+1 { j=i+j }; return j; } }'
+assert 55 'func main() int { { i:=0; j:=0; for ; i<=10; i=i+1 { j=i+j }; return j; } }'
+assert 55 'func main() int { { i:=0; j := 0; for ; i<=10; { j=i+j; i=i+1 }; return j; } }'
+assert 55 'func main() int { { i := 0; j := 0; for i<=10 { j=i+j; i=i+1 }; return j; } }'
 assert 3 'func main() int { { for {return 3;} return 5; } }'
 echo ""
 
@@ -91,8 +92,8 @@ echo ""
 
 echo "pointer"
 echo ""
-assert 3 'func main() int { { x=3; return *&x; } }'
-assert 3 'func main() int { { x=3; y=&x; z=&y; return **z; } }'
+assert 3 'func main() int { { var x=3; return *&x; } }'
+assert 3 'func main() int { { x := 3; var y = &x; z := &y; return **z; } }'
 echo ""
 
 echo "function"

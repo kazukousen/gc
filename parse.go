@@ -97,8 +97,8 @@ type expressionStmt struct {
 
 type assignment struct {
 	statement
-	lhs expression
-	rhs expression
+	lhs []expression
+	rhs []expression
 }
 
 // Expressions
@@ -159,9 +159,7 @@ func findLocalVar(name string) *obj {
 			return lv
 		}
 	}
-
-	// TODO: remove creating
-	return createLocalVar(name)
+	return nil
 }
 
 // TopLevelDecl = FunctionDecl .
@@ -175,6 +173,45 @@ func parse() *program {
 		expect(";")
 	}
 	return ret
+}
+
+// VarDecl = "var" ( VarSpec | "(" { VarSpec ";" } ")" ) .
+func parseVarDecl() statement {
+
+	if !consume("(") {
+		return parseVarSpec()
+	}
+
+	ret := &blockStmt{
+		stmts: []statement{},
+	}
+	for !consume(")") {
+		ret.stmts = append(ret.stmts, parseVarSpec())
+		expect(";")
+	}
+	return ret
+}
+
+// VarSpec = IdentifierList ( Type [ "=" ExpressionList ] | "=" ExpressionList ) .
+func parseVarSpec() statement {
+	ids := parseIdentifierList()
+	lhs := make([]expression, len(ids))
+	for i, id := range ids {
+		lhs[i] = id
+	}
+	if consume("=") {
+		rhs := parseExpressionList()
+		return &assignment{lhs: lhs, rhs: rhs}
+	}
+
+	parseType()
+	rhs := make([]expression, len(ids))
+	for i := range ids {
+		rhs[i] = &intLit{
+			val: 0,
+		}
+	}
+	return &assignment{lhs: lhs, rhs: rhs}
 }
 
 // FunctionDecl = "func" FunctionName Signature [ FunctionBody ] .
@@ -244,8 +281,14 @@ func parseType() {
 	expect("int")
 }
 
-// Statement = ReturnStmt | SimpleStmt .
+// Statement = Declaration | ReturnStmt | SimpleStmt .
+// Declaration = VarDecl .
 func parseStatement() statement {
+
+	// varDeclaration
+	if consume("var") {
+		return parseVarDecl()
+	}
 
 	// return
 	if consume("return") {
@@ -367,14 +410,35 @@ func parseForStmt() statement {
 }
 
 func parseSimpleStmt() statement {
-	expr := parseExpression()
+	expr := parseExpressionList()
 
 	if consume("=") {
 		// Assignment
-		return &assignment{lhs: expr, rhs: parseExpression()}
+		for i, l := range expr {
+			switch l := l.(type) {
+			case *obj:
+				lv := findLocalVar(l.name)
+				if lv == nil {
+					panic(fmt.Sprintf("a local variable not declared: %s", l.name))
+				}
+				expr[i] = lv
+			}
+		}
+		return &assignment{lhs: expr, rhs: parseExpressionList()}
 	}
 
-	return &expressionStmt{child: expr}
+	if consume(":=") {
+		// ShortVarDecl
+		for i, l := range expr {
+			switch l := l.(type) {
+			case *obj:
+				expr[i] = createLocalVar(l.name)
+			}
+		}
+		return &assignment{lhs: expr, rhs: parseExpressionList()}
+	}
+
+	return &expressionStmt{child: expr[0]}
 }
 
 // ExpressionList = Expression { "," Expression } .
@@ -389,6 +453,7 @@ func parseExpressionList() []expression {
 	return ret
 }
 
+// IdentifierList = identifier { "," identifier } .
 func parseIdentifierList() []*obj {
 	var ret []*obj
 	tok := consumeToken(tokenKindIdentifier)
@@ -499,10 +564,14 @@ func parseOperand() expression {
 
 	// identifier
 	if tok := consumeToken(tokenKindIdentifier); tok != nil {
-		lv := findLocalVar(tok.val)
 
 		if consume("(") {
 			return parseArguments(tok.val)
+		}
+
+		lv := findLocalVar(tok.val)
+		if lv == nil {
+			return &obj{name: tok.val}
 		}
 
 		return lv

@@ -5,18 +5,25 @@
 ```
 Type = int
 
+Declaration   = VarDecl .
 TopLevelDecl = FunctionDecl .
+
+VarDecl = "var" ( VarSpec | "(" { VarSpec ";" } ")" ) .
+VarSpec = IdentifierList ( Type [ "=" ExpressionList ] | "=" ExpressionList ) .
+
 FunctionDecl = "func" FunctionName Signature [ FunctionBody ] .
 FunctionName = identifier .
 FunctionBody = Block .
 
 StatementList  = { Statement ";" } .
-Statement      = ReturnStmt | Block | IfStmt | ForStmt | SimpleStmt .
+Statement      = Declaration | ReturnStmt | Block | IfStmt | ForStmt | SimpleStmt .
 ReturnStmt     = "return" [ ExpressionList ] .
 Block          = "{" StatementList "}" .
-SimpleStmt     = ExpressionStmt | Assignment .
 ExpressionStmt = Expression .
-Assignment     = Expression assign_op Expression .
+
+SimpleStmt     = ExpressionStmt | ShortVarDecl | Assignment .
+ShortVarDecl   = IdentifierList ":=" ExpressionList .
+Assignment     = ExpressionList assign_op ExpressionList .
 
 Signature      = Parameters [ Type ] .
 Parameters     = "(" [ ParameterList ] ")" .
