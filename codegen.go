@@ -48,6 +48,11 @@ func genStmt(stmt statement) {
 	case *ifStmt:
 		labelCnt++
 		cnt := labelCnt
+
+		if s.init != nil {
+			genStmt(s.init)
+		}
+
 		genExpr(s.cond)
 		fmt.Printf("\tpop rax\n")
 		fmt.Printf("\tcmp rax, 0\n")

@@ -293,6 +293,7 @@ func parseIfStmt() statement {
 		cond = t.child
 	} else {
 		init = tmp
+		expect(";")
 		cond = parseExpression()
 	}
 

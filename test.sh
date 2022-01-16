@@ -63,6 +63,7 @@ echo ""
 echo "if"
 echo ""
 assert 5 'func main() int { { i = 5; if i == 5 { return i}; return 0; } }'
+assert 5 'func main() int { { if i = 5; i == 5 { return i}; return 0; } }'
 assert 5 'func main() int { { i = 5; if i == 5 { return i} else { return 3} } }'
 assert 3 'func main() int { { i = 3; if i == 5 { return i} else { return 3} } }'
 assert 3 'func main() int { { i = 3; if i == 5 { return i} else if i == 3 { return 3} } }'
