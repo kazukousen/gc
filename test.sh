@@ -97,6 +97,9 @@ echo ""
 echo "function"
 echo ""
 assert 32 'func main() int { return ret32() }; func ret32() int { return 32; }'
+assert 7 'func main() int { return add2(3,4); }; func add2(x int, y int) int { return x+y }'
+assert 1 'func main() int { return sub2(4,3); }; func sub2(x int, y int) int { return x-y }'
+assert 55 'func main() int { return fib(9); }; func fib(x int) int { if x <= 1 { return 1}; return fib(x-1) + fib(x-2) }'
 echo ""
 
 echo OK

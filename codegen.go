@@ -18,6 +18,10 @@ func codegen(prog *program) {
 
 		fmt.Printf("\tsub rsp, %d\n", f.stackSize)
 
+		for i, p := range f.params {
+			fmt.Printf("\tmov [rbp-%d], %s\n", p.offset, argRegisters64[i])
+		}
+
 		genStmt(f.body)
 
 		fmt.Printf(".Lreturn.%s:\n", f.name)
