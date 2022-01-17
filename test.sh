@@ -90,6 +90,8 @@ echo ""
 echo "function"
 echo ""
 assert 35 'func main() int {a, b := myFunction(3, 4); return a * b}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
+assert 7 'func main() int {a, b := myFunction(3, 4); return a}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
+assert 5 'func main() int {a, b := myFunction(3, 4); return b}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
 echo ""
 
 echo OK
