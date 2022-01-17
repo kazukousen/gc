@@ -87,4 +87,9 @@ assert 5 'func main() {return myFunction(1, myFunction(1, 3))}; func myFunction(
 assert 13 'func myFunction(a, b int) int {return a + b}; func main() { a := 6; return myFunction(a, 7)}'
 echo ""
 
+echo "function"
+echo ""
+assert 35 'func main() {a, b := myFunction(3, 4); return a * b}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
+echo ""
+
 echo OK

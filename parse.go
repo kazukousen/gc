@@ -263,24 +263,45 @@ func parseFunction() *function {
 
 	expect("(")
 	// Signature = Parameters [ Type ] .
-	ret.params = parseParameters()
+	ret.params, ret.results = parseSignature()
 
-	// TODO: no body supported yet
-	for !consume("{") {
-		// TODO: identifier
-		tok := consumeToken(tokenKindType)
-		if tok != nil {
-			results = append(results, createLocalVar(tok.val))
-		}
-	}
-	ret.results = results
-
+	results = ret.results
+	expect("{")
 	ret.body = parseBlockStmt()
 	ret.locals = locals
 
 	ret.assignLVarOffsets()
 
 	return ret
+}
+
+func parseSignature() ([]*obj, []*obj) {
+	params := parseParameters()
+
+	if consume("(") {
+		// multiple results
+		for i := 0; !consume(")"); i++ {
+			if i > 0 {
+				expect(",")
+			}
+			// TODO: identifier
+			tok := consumeToken(tokenKindType)
+			if tok == nil {
+				panic(fmt.Sprintf("Expected a type: %+v", tokens[0]))
+			}
+			results = append(results, createLocalVar(tok.val))
+		}
+
+		return params, results
+	}
+
+	if tok := consumeToken(tokenKindType); tok != nil {
+		// TODO: identifier
+		results = append(results, createLocalVar(tok.val))
+		return params, results
+	}
+
+	return params, results
 }
 
 // Parameters = "(" [ ParameterList ] ")" .

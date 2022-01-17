@@ -42,8 +42,8 @@ func genStmt(stmt statement) {
 			for _, child := range s.children {
 				genExpr(child)
 			}
+			fmt.Printf("\tpop rax\n")
 		}
-		fmt.Printf("\tpop rax\n")
 		fmt.Printf("\tjmp .Lreturn.%s\n", funcName)
 	case *blockStmt:
 		for _, s := range s.stmts {
@@ -95,9 +95,11 @@ func genStmt(stmt statement) {
 	case *expressionStmt:
 		genExpr(s.child)
 	case *assignment:
+		for i := range s.rhs {
+			genExpr(s.rhs[i])
+		}
 		for i := range s.lhs {
 			genAddr(s.lhs[i])
-			genExpr(s.rhs[i])
 			store()
 		}
 	}
@@ -173,7 +175,7 @@ func load() {
 func store() {
 	fmt.Printf("\tpop rdi\n")
 	fmt.Printf("\tpop rax\n")
-	fmt.Printf("\tmov [rax], rdi\n")
+	fmt.Printf("\tmov [rdi], rax\n")
 }
 
 func genAddr(expr expression) {
