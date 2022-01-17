@@ -104,16 +104,14 @@ func genExpr(expr expression) {
 	switch e := expr.(type) {
 	case *funcCall:
 
-		fmt.Printf("\tsub rsp, %d\n", e.resultSize)
+		fmt.Printf("\tsub rsp, %d\n", e.resultsSize)
 
 		for _, arg := range e.args {
 			genExpr(arg)
 		}
 
 		fmt.Printf("\tcall %s\n", e.name)
-		for range e.args {
-			fmt.Printf("\tadd rsp, 8\n")
-		}
+		fmt.Printf("\tadd rsp, %d\n", e.paramsSize)
 	case *intLit:
 		fmt.Printf("\tpush %d\n", e.val)
 	case *obj:

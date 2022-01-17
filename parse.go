@@ -41,13 +41,14 @@ type program struct {
 }
 
 type function struct {
-	name       string
-	body       statement
-	params     []*obj
-	results    []*obj
-	locals     []*obj
-	stackSize  int
-	resultSize int
+	name        string
+	body        statement
+	params      []*obj
+	results     []*obj
+	locals      []*obj
+	stackSize   int
+	paramsSize  int
+	resultsSize int
 }
 
 func (f *function) assignLVarOffsets() {
@@ -56,12 +57,12 @@ func (f *function) assignLVarOffsets() {
 		offset += 8
 		f.params[i].offset = offset
 	}
-	f.resultSize = offset
+	f.paramsSize = offset - 8
 	for i := len(f.results) - 1; i >= 0; i-- {
 		offset += 8
 		f.results[i].offset = offset
 	}
-	f.resultSize = offset - f.resultSize
+	f.resultsSize = offset - f.paramsSize - 8
 
 	offset = 0
 	for i := len(f.locals) - 1; i >= 0; i-- {
@@ -126,9 +127,10 @@ type expression interface {
 
 type funcCall struct {
 	expression
-	name       string
-	args       []expression
-	resultSize int
+	name        string
+	args        []expression
+	resultsSize int
+	paramsSize  int
 }
 
 var callers []*funcCall
@@ -200,7 +202,8 @@ func parse() *program {
 
 	for _, c := range callers {
 		f := mFuncs[c.name]
-		c.resultSize = f.resultSize
+		c.resultsSize = f.resultsSize
+		c.paramsSize = f.paramsSize
 	}
 
 	return ret
