@@ -82,8 +82,7 @@ type statement interface {
 
 type returnStmt struct {
 	statement
-	child    statement
-	children []expression
+	child statement
 }
 
 type blockStmt struct {
@@ -354,15 +353,12 @@ func parseStatement() statement {
 		if peek("}") {
 			return &returnStmt{}
 		}
-		ret := parseExpressionList()
-		if len(results) == 0 {
-			return &returnStmt{children: ret}
-		}
-		res := make([]expression, len(results))
+		lhs := make([]expression, len(results))
 		for i, v := range results {
-			res[i] = v
+			lhs[i] = v
 		}
-		return &returnStmt{child: &assignment{lhs: res, rhs: ret}}
+		rhs := parseExpressionList()
+		return &returnStmt{child: &assignment{lhs: lhs, rhs: rhs}}
 	}
 
 	// block

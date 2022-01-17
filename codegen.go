@@ -38,11 +38,6 @@ func genStmt(stmt statement) {
 	case *returnStmt:
 		if s.child != nil {
 			genStmt(s.child)
-		} else if s.children != nil {
-			for _, child := range s.children {
-				genExpr(child)
-			}
-			fmt.Printf("\tpop rax\n")
 		}
 		fmt.Printf("\tjmp .Lreturn.%s\n", funcName)
 	case *blockStmt:
