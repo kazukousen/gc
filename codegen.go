@@ -2,29 +2,29 @@ package main
 
 import "fmt"
 
-var argRegisters64 = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
+var funcName string
 
 func codegen(prog *program) {
 
 	fmt.Printf(".intel_syntax noprefix\n")
 
 	fmt.Printf("\t.text\n")
+	fmt.Printf("\tjmp main\n")
 
 	for _, f := range prog.funcs {
-		fmt.Printf("\t.globl %s\n", f.name)
-		fmt.Printf("%s:\n", f.name)
+
+		funcName = f.name
+
+		fmt.Printf("\t.globl %s\n", funcName)
+		fmt.Printf("%s:\n", funcName)
 		fmt.Printf("\tpush rbp\n")
 		fmt.Printf("\tmov rbp, rsp\n")
 
 		fmt.Printf("\tsub rsp, %d\n", f.stackSize)
 
-		for i, p := range f.params {
-			fmt.Printf("\tmov [rbp-%d], %s\n", p.offset, argRegisters64[i])
-		}
-
 		genStmt(f.body)
 
-		fmt.Printf(".Lreturn.%s:\n", f.name)
+		fmt.Printf(".Lreturn.%s:\n", funcName)
 		fmt.Printf("\tmov rsp, rbp\n")
 		fmt.Printf("\tpop rbp\n")
 		fmt.Printf("\tret\n")
@@ -36,11 +36,15 @@ var labelCnt = 0
 func genStmt(stmt statement) {
 	switch s := stmt.(type) {
 	case *returnStmt:
-		for _, child := range s.children {
-			genExpr(child)
+		if s.child != nil {
+			genStmt(s.child)
+		} else if s.children != nil {
+			for _, child := range s.children {
+				genExpr(child)
+			}
+			fmt.Printf("\tpop rax\n")
 		}
-		fmt.Printf("\tpop rax\n")
-		fmt.Printf("\tjmp .Lreturn.main\n")
+		fmt.Printf("\tjmp .Lreturn.%s\n", funcName)
 	case *blockStmt:
 		for _, s := range s.stmts {
 			genStmt(s)
@@ -91,9 +95,11 @@ func genStmt(stmt statement) {
 	case *expressionStmt:
 		genExpr(s.child)
 	case *assignment:
+		for i := range s.rhs {
+			genExpr(s.rhs[i])
+		}
 		for i := range s.lhs {
 			genAddr(s.lhs[i])
-			genExpr(s.rhs[i])
 			store()
 		}
 	}
@@ -102,16 +108,17 @@ func genStmt(stmt statement) {
 func genExpr(expr expression) {
 	switch e := expr.(type) {
 	case *funcCall:
+
+		fmt.Printf("\tsub rsp, %d\n", e.resultSize)
+
 		for _, arg := range e.args {
 			genExpr(arg)
 		}
 
-		for i := len(e.args) - 1; i >= 0; i-- {
-			fmt.Printf("\tpop %s\n", argRegisters64[i])
-		}
-
 		fmt.Printf("\tcall %s\n", e.name)
-		fmt.Printf("\tpush rax\n")
+		for range e.args {
+			fmt.Printf("\tadd rsp, 8\n")
+		}
 	case *intLit:
 		fmt.Printf("\tpush %d\n", e.val)
 	case *obj:
@@ -168,13 +175,13 @@ func load() {
 func store() {
 	fmt.Printf("\tpop rdi\n")
 	fmt.Printf("\tpop rax\n")
-	fmt.Printf("\tmov [rax], rdi\n")
+	fmt.Printf("\tmov [rdi], rax\n")
 }
 
 func genAddr(expr expression) {
 	switch e := expr.(type) {
 	case *obj:
-		fmt.Printf("\tlea rax, [rbp-%d]\n", e.offset)
+		fmt.Printf("\tlea rax, [rbp%+d]\n", e.offset)
 		fmt.Printf("\tpush rax\n")
 	default:
 		panic("not a value")

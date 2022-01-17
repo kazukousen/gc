@@ -41,18 +41,35 @@ type program struct {
 }
 
 type function struct {
-	name      string
-	body      statement
-	params    []*obj
-	locals    []*obj
-	stackSize int
+	name       string
+	body       statement
+	params     []*obj
+	results    []*obj
+	locals     []*obj
+	stackSize  int
+	resultSize int
 }
 
 func (f *function) assignLVarOffsets() {
-	offset := 0
-	for i := len(f.locals) - 1; i >= 0; i-- {
+	offset := 8
+	for i := len(f.params) - 1; i >= 0; i-- {
 		offset += 8
-		f.locals[i].offset = offset
+		f.params[i].offset = offset
+	}
+	f.resultSize = offset
+	for i := len(f.results) - 1; i >= 0; i-- {
+		offset += 8
+		f.results[i].offset = offset
+	}
+	f.resultSize = offset - f.resultSize
+
+	offset = 0
+	for i := len(f.locals) - 1; i >= 0; i-- {
+		if f.locals[i].offset != 0 {
+			continue
+		}
+		offset += 8
+		f.locals[i].offset = -offset
 	}
 	f.stackSize = offset
 }
@@ -65,6 +82,7 @@ type statement interface {
 
 type returnStmt struct {
 	statement
+	child    statement
 	children []expression
 }
 
@@ -109,9 +127,12 @@ type expression interface {
 
 type funcCall struct {
 	expression
-	name string
-	args []expression
+	name       string
+	args       []expression
+	resultSize int
 }
+
+var callers []*funcCall
 
 type intLit struct {
 	expression
@@ -141,7 +162,9 @@ type addr struct {
 	child expression
 }
 
+// temporary sets
 var locals []*obj
+var results []*obj
 
 func createLocalVar(name string) *obj {
 	lv := &obj{
@@ -164,14 +187,23 @@ func findLocalVar(name string) *obj {
 
 // TopLevelDecl = FunctionDecl .
 func parse() *program {
+	mFuncs := make(map[string]*function)
 	ret := &program{
 		funcs: make([]*function, 0),
 	}
 	for len(tokens) > 0 {
 		expect("func")
-		ret.funcs = append(ret.funcs, parseFunction())
+		f := parseFunction()
+		ret.funcs = append(ret.funcs, f)
+		mFuncs[f.name] = f
 		expect(";")
 	}
+
+	for _, c := range callers {
+		f := mFuncs[c.name]
+		c.resultSize = f.resultSize
+	}
+
 	return ret
 }
 
@@ -220,6 +252,7 @@ func parseVarSpec() statement {
 func parseFunction() *function {
 
 	locals = []*obj{}
+	results = []*obj{}
 
 	tok := consumeToken(tokenKindIdentifier)
 	if tok == nil {
@@ -230,20 +263,45 @@ func parseFunction() *function {
 
 	expect("(")
 	// Signature = Parameters [ Type ] .
-	ret.params = parseParameters()
-	// TODO: support void
-	parseType()
+	ret.params, ret.results = parseSignature()
 
-	if !consume("{") {
-		return ret
-	}
-
+	results = ret.results
+	expect("{")
 	ret.body = parseBlockStmt()
 	ret.locals = locals
 
 	ret.assignLVarOffsets()
 
 	return ret
+}
+
+func parseSignature() ([]*obj, []*obj) {
+	params := parseParameters()
+
+	if consume("(") {
+		// multiple results
+		for i := 0; !consume(")"); i++ {
+			if i > 0 {
+				expect(",")
+			}
+			// TODO: identifier
+			tok := consumeToken(tokenKindType)
+			if tok == nil {
+				panic(fmt.Sprintf("Expected a type: %+v", tokens[0]))
+			}
+			results = append(results, createLocalVar(tok.val))
+		}
+
+		return params, results
+	}
+
+	if tok := consumeToken(tokenKindType); tok != nil {
+		// TODO: identifier
+		results = append(results, createLocalVar(tok.val))
+		return params, results
+	}
+
+	return params, results
 }
 
 // Parameters = "(" [ ParameterList ] ")" .
@@ -297,7 +355,14 @@ func parseStatement() statement {
 			return &returnStmt{}
 		}
 		ret := parseExpressionList()
-		return &returnStmt{children: ret}
+		if len(results) == 0 {
+			return &returnStmt{children: ret}
+		}
+		res := make([]expression, len(results))
+		for i, v := range results {
+			res[i] = v
+		}
+		return &returnStmt{child: &assignment{lhs: res, rhs: ret}}
 	}
 
 	// block
@@ -585,6 +650,8 @@ func parseOperand() expression {
 func parseArguments(name string) expression {
 
 	ret := &funcCall{name: name}
+
+	callers = append(callers, ret)
 
 	if consume(")") {
 		return ret
