@@ -103,15 +103,12 @@ func genStmt(stmt statement) {
 func genExpr(expr expression) {
 	switch e := expr.(type) {
 	case *funcCall:
-
-		fmt.Printf("\tsub rsp, %d\n", e.resultsSize)
-
+		fmt.Printf("\tsub rsp, %d\n", e.target.resultsSize)
 		for _, arg := range e.args {
 			genExpr(arg)
 		}
-
 		fmt.Printf("\tcall %s\n", e.name)
-		fmt.Printf("\tadd rsp, %d\n", e.paramsSize)
+		fmt.Printf("\tadd rsp, %d\n", e.target.paramsSize)
 	case *intLit:
 		fmt.Printf("\tpush %d\n", e.val)
 	case *obj:
