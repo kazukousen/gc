@@ -29,7 +29,7 @@ var (
 	}
 	typeKindSize = map[string]int{
 		"int":  8,
-		"bool": 8,
+		"bool": 1,
 	}
 )
 
@@ -78,10 +78,17 @@ func addType(n interface{}) {
 	case *assignment:
 		if se := n.rhs.singleMultiValuedExpression(); se != nil {
 			addType(se)
-			for i, e := range se.multiValues() {
+			rhs := se.multiValues()
+			if len(n.lhs) != len(rhs) {
+				panic(fmt.Sprintf("assigment operands must be same length: lhs=%d, rhs=%d", len(n.lhs), len(rhs)))
+			}
+			for i, e := range rhs {
 				n.lhs[i].setType(e.getType())
 			}
 		} else {
+			if len(n.lhs) != len(n.rhs) {
+				panic(fmt.Sprintf("assigment operands must be same length: lhs=%d, rhs=%d", len(n.lhs), len(n.rhs)))
+			}
 			for i, e := range n.rhs {
 				addType(e)
 				n.lhs[i].setType(e.getType())

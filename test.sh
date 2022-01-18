@@ -27,11 +27,6 @@ assert 48 'func main() int{return 42 + 3+ 4-1}'
 assert 12 'func main() int {return 5 * 6 / 2 + 5 - 8}'
 assert 10 'func main() int {return 5 * -6 / 2 + -5 + 30}'
 assert 160 'func main() int {return 5 * (-6 / (2 + -5) + 30)}'
-assert 1 'func main() int{return 100 > 50}'
-assert 0 'func main() int {return 100 < 50}'
-assert 1 'func main() int {return 100 == 100}'
-assert 0 'func main() int { return 100 == 50 }'
-assert 1 'func main() int { return 100 != 50 }'
 
 assert 2 'func main() int { 1; return 2; }'
 assert 1 'func main() int { return 1; 2; }'
@@ -59,6 +54,11 @@ assert 3 'func main() int { var i = 3; if i == 5 { return i} else { return 3}  }
 assert 3 'func main() int { var i = 3; if i == 5 { return i} else if i == 3 { return 3}  }'
 assert 3 'func main() int { i := 1; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i }'
 assert 4 'func main() int { i := 4; if i == 5 { return i} else if i == 4 { return 4} else { i = 3 } return i }'
+assert 1 'func main() int{if 100 > 50 { return 1} else { return 0 }}'
+assert 0 'func main() int {if 100 < 50 { return 1 } else {return 0 }}'
+assert 1 'func main() int {if 100 == 100 {return 1 }else { return 0 }}'
+assert 0 'func main() int {if 100 == 50 {return 1 }else { return 0 }}'
+assert 1 'func main() int {if 100 != 50 {return 1 }else { return 0 }}'
 echo ""
 
 echo "for"

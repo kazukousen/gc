@@ -161,7 +161,7 @@ type singleMultiValuedExpression interface {
 type expressionList []expression
 
 func (es expressionList) singleMultiValuedExpression() singleMultiValuedExpression {
-	if len(es) > 0 {
+	if len(es) == 1 {
 		if e, ok := es[0].(singleMultiValuedExpression); ok {
 			return e
 		}
