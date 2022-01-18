@@ -54,13 +54,15 @@ type function struct {
 func (f *function) assignLVarOffsets() {
 	offset := 8
 	for i := len(f.params) - 1; i >= 0; i-- {
-		offset += 8
-		f.params[i].offset = offset
+		lv := f.params[i]
+		offset += lv.ty.size
+		lv.offset = offset
 	}
 	f.paramsSize = offset - 8
 	for i := len(f.results) - 1; i >= 0; i-- {
-		offset += 8
-		f.results[i].offset = offset
+		lv := f.results[i]
+		offset += lv.ty.size
+		lv.offset = offset
 	}
 	f.resultsSize = offset - f.paramsSize - 8
 
@@ -69,7 +71,8 @@ func (f *function) assignLVarOffsets() {
 		if f.locals[i].offset != 0 {
 			continue
 		}
-		offset += 8
+		lv := f.locals[i]
+		offset += lv.ty.size
 		f.locals[i].offset = -offset
 	}
 	f.stackSize = offset
@@ -83,24 +86,37 @@ type statement interface {
 
 type returnStmt struct {
 	statement
+	ty    *typ
 	child statement
 }
 
+func (s *returnStmt) getType() *typ   { return s.ty }
+func (s *returnStmt) setType(ty *typ) { s.ty = ty }
+
 type blockStmt struct {
 	statement
+	ty    *typ
 	stmts []statement
 }
 
+func (s *blockStmt) getType() *typ   { return s.ty }
+func (s *blockStmt) setType(ty *typ) { s.ty = ty }
+
 type ifStmt struct {
 	statement
+	ty   *typ
 	init statement
 	cond expression
 	then statement
 	els  statement
 }
 
+func (s *ifStmt) getType() *typ   { return s.ty }
+func (s *ifStmt) setType(ty *typ) { s.ty = ty }
+
 type forStmt struct {
 	statement
+	ty   *typ
 	cond expression
 	init statement
 	post statement
@@ -108,64 +124,122 @@ type forStmt struct {
 	body statement
 }
 
+func (s *forStmt) getType() *typ   { return s.ty }
+func (s *forStmt) setType(ty *typ) { s.ty = ty }
+
 type expressionStmt struct {
 	statement
+	ty    *typ
 	child expression
 }
 
+func (s *expressionStmt) getType() *typ   { return s.ty }
+func (s *expressionStmt) setType(ty *typ) { s.ty = ty }
+
 type assignment struct {
 	statement
+	ty  *typ
 	lhs []expression
-	rhs []expression
+	rhs expressionList
 }
+
+func (s *assignment) getType() *typ   { return s.ty }
+func (s *assignment) setType(ty *typ) { s.ty = ty }
 
 // Expressions
 
 type expression interface {
 	anExpr()
+	getType() *typ
+	setType(ty *typ)
 }
 
-type funcCall struct {
-	expression
-	name        string
-	args        []expression
-	resultsSize int
-	paramsSize  int
+type singleMultiValuedExpression interface {
+	multiValues() []expression
 }
 
-var callers []*funcCall
+type expressionList []expression
+
+func (es expressionList) singleMultiValuedExpression() singleMultiValuedExpression {
+	if len(es) > 0 {
+		if e, ok := es[0].(singleMultiValuedExpression); ok {
+			return e
+		}
+	}
+	return nil
+}
 
 type intLit struct {
 	expression
+	ty  *typ
 	val int
 }
 
+func (e *intLit) getType() *typ   { return e.ty }
+func (e *intLit) setType(ty *typ) { e.ty = ty }
+
 type binary struct {
 	expression
+	ty  *typ
 	op  string
 	lhs expression
 	rhs expression
 }
 
+func (e *binary) getType() *typ   { return e.ty }
+func (e *binary) setType(ty *typ) { e.ty = ty }
+
 type obj struct {
 	expression
+	ty     *typ
 	name   string
 	offset int
 }
 
+func (e *obj) getType() *typ   { return e.ty }
+func (e *obj) setType(ty *typ) { e.ty = ty }
+
 type deref struct {
 	expression
+	ty    *typ
 	child expression
 }
 
+func (e *deref) getType() *typ   { return e.ty }
+func (e *deref) setType(ty *typ) { e.ty = ty }
+
 type addr struct {
 	expression
+	ty    *typ
 	child expression
 }
+
+func (e *addr) getType() *typ   { return e.ty }
+func (e *addr) setType(ty *typ) { e.ty = ty }
+
+type funcCall struct {
+	expression
+	ty     *typ
+	name   string
+	args   []expression
+	target *function
+}
+
+func (e *funcCall) multiValues() []expression {
+	ret := make([]expression, len(e.target.results))
+	for i, res := range e.target.results {
+		ret[i] = res
+	}
+	return ret
+}
+
+func (e *funcCall) getType() *typ   { return e.ty }
+func (e *funcCall) setType(ty *typ) { e.ty = ty }
 
 // temporary sets
 var locals []*obj
 var results []*obj
+var callees []*funcCall
 
 func createLocalVar(name string) *obj {
 	lv := &obj{
@@ -200,10 +274,14 @@ func parse() *program {
 		expect(";")
 	}
 
-	for _, c := range callers {
+	for _, c := range callees {
 		f := mFuncs[c.name]
-		c.resultsSize = f.resultsSize
-		c.paramsSize = f.paramsSize
+		c.target = f
+	}
+
+	for _, f := range ret.funcs {
+		addType(f.body)
+		f.assignLVarOffsets()
 	}
 
 	return ret
@@ -238,11 +316,12 @@ func parseVarSpec() statement {
 		return &assignment{lhs: lhs, rhs: rhs}
 	}
 
-	parseType()
+	ty := parseType()
 	rhs := make([]expression, len(ids))
 	for i := range ids {
 		rhs[i] = &intLit{
 			val: 0,
+			ty:  ty,
 		}
 	}
 	return &assignment{lhs: lhs, rhs: rhs}
@@ -266,13 +345,9 @@ func parseFunction() *function {
 	expect("(")
 	// Signature = Parameters [ Type ] .
 	ret.params, ret.results = parseSignature()
-
-	results = ret.results
 	expect("{")
 	ret.body = parseBlockStmt()
 	ret.locals = locals
-
-	ret.assignLVarOffsets()
 
 	return ret
 }
@@ -291,7 +366,9 @@ func parseSignature() ([]*obj, []*obj) {
 			if tok == nil {
 				panic(fmt.Sprintf("Expected a type: %+v", tokens[0]))
 			}
-			results = append(results, createLocalVar(tok.val))
+			lv := createLocalVar(tok.val)
+			lv.ty = newLiteralType(tok.val)
+			results = append(results, lv)
 		}
 
 		return params, results
@@ -299,7 +376,9 @@ func parseSignature() ([]*obj, []*obj) {
 
 	if tok := consumeToken(tokenKindType); tok != nil {
 		// TODO: identifier
-		results = append(results, createLocalVar(tok.val))
+		lv := createLocalVar(tok.val)
+		lv.ty = newLiteralType(tok.val)
+		results = append(results, lv)
 		return params, results
 	}
 
@@ -333,12 +412,19 @@ func parseParameterList() []*obj {
 // ParameterDecl  = [ IdentifierList ] Type .
 func parseParameterDecl() []*obj {
 	ids := parseIdentifierList()
-	parseType()
+	ty := parseType()
+	for _, id := range ids {
+		id.ty = ty
+	}
 	return ids
 }
 
-func parseType() {
-	expect("int")
+func parseType() *typ {
+	tok := consumeToken(tokenKindType)
+	if tok == nil {
+		panic(fmt.Sprintf("Expected a type: %+v", tokens[0]))
+	}
+	return newLiteralType(tok.val)
 }
 
 // Statement = Declaration | ReturnStmt | SimpleStmt .
@@ -496,7 +582,9 @@ func parseSimpleStmt() statement {
 		for i, l := range expr {
 			switch l := l.(type) {
 			case *obj:
-				expr[i] = createLocalVar(l.name)
+				lv := createLocalVar(l.name)
+				lv.ty = newLiteralType("int")
+				expr[i] = lv
 			}
 		}
 		return &assignment{lhs: expr, rhs: parseExpressionList()}
@@ -506,9 +594,9 @@ func parseSimpleStmt() statement {
 }
 
 // ExpressionList = Expression { "," Expression } .
-func parseExpressionList() []expression {
+func parseExpressionList() expressionList {
 
-	ret := []expression{parseExpression()}
+	ret := expressionList{parseExpression()}
 
 	for consume(",") {
 		ret = append(ret, parseExpression())
@@ -650,7 +738,7 @@ func parseArguments(name string) expression {
 
 	ret := &funcCall{name: name}
 
-	callers = append(callers, ret)
+	callees = append(callees, ret)
 
 	if consume(")") {
 		return ret

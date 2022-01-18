@@ -35,7 +35,6 @@ assert 1 'func main() int { return 100 != 50 }'
 
 assert 2 'func main() int { 1; return 2; }'
 assert 1 'func main() int { return 1; 2; }'
-assert 3 'func main() int { return 1, 3; }'
 assert 2 'func main() int { return (1 + 3) / 2 }'
 
 echo "local variables"
