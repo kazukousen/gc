@@ -56,15 +56,15 @@ func (f *function) assignLVarOffsets() {
 	for i := range f.params {
 		lv := f.params[i]
 		offset += lv.ty.size
-		lv.offset = alignTo(offset, lv.ty.size)
+		lv.offset = alignTo(offset, 8)
 	}
-	f.paramsSize = offset - 8
+	f.paramsSize = alignTo(offset-8, 8)
 	for i := len(f.results) - 1; i >= 0; i-- {
 		lv := f.results[i]
 		offset += lv.ty.size
 		lv.offset = alignTo(offset, 8)
 	}
-	f.resultsSize = offset - f.paramsSize - 8
+	f.resultsSize = alignTo(offset-f.paramsSize-8, 8)
 
 	offset = 0
 	for i := len(f.locals) - 1; i >= 0; i-- {

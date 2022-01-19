@@ -101,6 +101,8 @@ assert 35 'func main() int {a, b := myFunction(3, 4); return a * b}; func myFunc
 assert 7 'func main() int {a, b := myFunction(3, 4); return a}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
 assert 5 'func main() int {a, b := myFunction(3, 4); return b}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
 assert 11 'func main() int {a, b := myFunction(3, 4); return a}; func myFunction(x, y int) (int, int) { lvar := 5; y = y * 2; return x + y, 5 }'
+assert 11 'func main() int {a, b := myFunction(3, 4); return a}; func myFunction(x, y int) (int, byte) { var lvar byte = 5; y = y * 2; return x + y, 5 }'
+
 echo ""
 
 echo "struct"

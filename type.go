@@ -50,9 +50,9 @@ var (
 		typeKindPtr:  8,
 	}
 	zeroValueMap = map[typeKind]expression{
-		typeKindInt: &intLit{
-			val: 0,
-		},
+		typeKindInt:  &intLit{val: 0},
+		typeKindByte: &intLit{val: 0},
+		typeKindBool: &intLit{val: 0},
 	}
 )
 
