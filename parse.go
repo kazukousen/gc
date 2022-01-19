@@ -178,6 +178,16 @@ type intLit struct {
 func (e *intLit) getType() *typ   { return e.ty }
 func (e *intLit) setType(ty *typ) { e.ty = ty }
 
+type memberRef struct {
+	expression
+	ty     *typ
+	member *member
+	child  expression
+}
+
+func (e *memberRef) getType() *typ   { return e.ty }
+func (e *memberRef) setType(ty *typ) { e.ty = ty }
+
 type binary struct {
 	expression
 	ty  *typ
@@ -307,24 +317,39 @@ func parseVarDecl() statement {
 // VarSpec = IdentifierList ( Type [ "=" ExpressionList ] | "=" ExpressionList ) .
 func parseVarSpec() statement {
 	ids := parseIdentifierList()
-	lhs := make([]expression, len(ids))
-	for i, id := range ids {
-		lhs[i] = id
-	}
 	if consume("=") {
+		lhs := make([]expression, len(ids))
+		for i, id := range ids {
+			lhs[i] = createLocalVar(id)
+		}
 		rhs := parseExpressionList()
 		return &assignment{lhs: lhs, rhs: rhs}
 	}
 
 	ty := parseType()
-	rhs := make([]expression, len(ids))
-	for i := range ids {
-		rhs[i] = &intLit{
-			val: 0,
-			ty:  ty,
-		}
+	stmts := make([]statement, len(ids))
+	for i, id := range ids {
+		lv := createLocalVar(id)
+		lv.ty = ty
+		stmts[i] = initializer(lv)
 	}
-	return &assignment{lhs: lhs, rhs: rhs}
+	return &blockStmt{stmts: stmts}
+}
+
+func initializer(expr expression) statement {
+	switch ty := expr.getType(); ty.kind {
+	case typeKindStruct:
+		stmts := make([]statement, len(ty.members))
+		for i, mem := range ty.members {
+			lhs := &memberRef{child: expr, member: mem, ty: mem.ty}
+			stmts[i] = initializer(lhs)
+		}
+		return &blockStmt{
+			stmts: stmts,
+		}
+	default:
+		return &assignment{lhs: expressionList{expr}, rhs: expressionList{zeroValueMap[ty.kind]}}
+	}
 }
 
 // FunctionDecl = "func" FunctionName Signature [ FunctionBody ] .
@@ -413,10 +438,12 @@ func parseParameterList() []*obj {
 func parseParameterDecl() []*obj {
 	ids := parseIdentifierList()
 	ty := parseType()
-	for _, id := range ids {
-		id.ty = ty
+	ret := make([]*obj, len(ids))
+	for i, id := range ids {
+		ret[i] = createLocalVar(id)
+		ret[i].ty = ty
 	}
-	return ids
+	return ret
 }
 
 func parseType() *typ {
@@ -424,6 +451,11 @@ func parseType() *typ {
 	if tok == nil {
 		panic(fmt.Sprintf("Expected a type: %+v", tokens[0]))
 	}
+
+	if tok.val == "struct" {
+		return parseStructDecl()
+	}
+
 	return newLiteralType(tok.val)
 }
 
@@ -606,20 +638,20 @@ func parseExpressionList() expressionList {
 }
 
 // IdentifierList = identifier { "," identifier } .
-func parseIdentifierList() []*obj {
-	var ret []*obj
+func parseIdentifierList() []string {
+	var ret []string
 	tok := consumeToken(tokenKindIdentifier)
 	if tok == nil {
 		return ret
 	}
-	ret = append(ret, createLocalVar(tok.val))
+	ret = append(ret, tok.val)
 
 	for consume(",") {
 		tok := consumeToken(tokenKindIdentifier)
 		if tok == nil {
 			panic(fmt.Sprintf("Expect an identifier: %+v", tokens[0]))
 		}
-		ret = append(ret, createLocalVar(tok.val))
+		ret = append(ret, tok.val)
 	}
 	return ret
 }
@@ -698,12 +730,43 @@ func parseUnary() expression {
 	}
 }
 
-// PrimaryExpr = Operand .
+// PrimaryExpr = Operand | PrimaryExpr Selector .
+// Selector    = "." identifier .
 func parsePrimary() expression {
 
 	expr := parseOperand()
 
-	return expr
+	for {
+		if consume(".") {
+			expr = parseMemberRef(expr)
+			continue
+		}
+
+		return expr
+	}
+}
+
+func parseMemberRef(expr expression) expression {
+	addType(expr)
+	ty := expr.getType()
+	if ty.kind != typeKindStruct {
+		panic("expected struct type")
+	}
+
+	tok := consumeToken(tokenKindIdentifier)
+	if tok == nil {
+		panic(fmt.Sprintf("Expected an identifier: %+v", tokens[0]))
+	}
+
+	var mem *member
+	for i := range ty.members {
+		m := ty.members[i]
+		if m.name == tok.val {
+			mem = m
+		}
+	}
+
+	return &memberRef{child: expr, member: mem}
 }
 
 // Operand = Literal | identifier [ Arguments ] | "(" Expression ")" .
@@ -730,7 +793,7 @@ func parseOperand() expression {
 	}
 
 	// Literal
-	return parseIntLit()
+	return parseLiteral()
 }
 
 // Arguments = "(" [ ExpressionList [ "..." ] [ "," ] ] ")" .
@@ -750,12 +813,58 @@ func parseArguments(name string) expression {
 	return ret
 }
 
-func parseIntLit() expression {
+func parseLiteral() expression {
 
+	if consume("struct") {
+		ty := parseStructDecl()
+		expect("{")
+		return parseLiteralValue(ty)
+	}
+
+	return parseIntLit()
+}
+
+// StructType    = "struct" "{" { FieldDecl ";" } "}" .
+// FieldDecl     = (IdentifierList Type) .
+func parseStructDecl() *typ {
+	expect("{")
+	var members []*member
+	for !consume("}") {
+		ids := parseIdentifierList()
+		ty := parseType()
+		for _, id := range ids {
+			members = append(members, &member{
+				name: id,
+				ty:   ty,
+			})
+		}
+		expect(";")
+	}
+	return newStructType(members)
+}
+
+// LiteralValue  = "{" [ ElementList [ "," ] ] "}" .
+// ElementList   = KeyedElement { "," KeyedElement } .
+// KeyedElement  = [ Key ":" ] Element .
+// Key           = FieldName | Expression | LiteralValue .
+// FieldName     = identifier .
+// Element       = Expression | LiteralValue .
+func parseLiteralValue(ty *typ) *obj {
+	expect("}")
+	v := &obj{
+		ty: ty,
+	}
+	return v
+}
+
+func parseIntLit() expression {
+	return &intLit{
+		val: parseNum(),
+	}
+}
+
+func parseNum() int {
 	tok := tokens[0]
 	advance()
-
-	return &intLit{
-		val: tok.num,
-	}
+	return tok.num
 }

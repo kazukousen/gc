@@ -45,7 +45,7 @@ func tokenize() {
 			continue
 		}
 
-		if strings.Contains("+-*/()=<>!,{}&:", in[0:1]) {
+		if strings.Contains("+-*/()=<>!,{}&:.", in[0:1]) {
 			if len(in) > 1 && (in[0:2] == "<=" || in[0:2] == ">=" || in[0:2] == "==" || in[0:2] == "!=" || in[0:2] == ":=") {
 				tokens = append(tokens, &token{kind: tokenKindOperator, val: in[0:2]})
 				in = in[2:]
@@ -117,8 +117,9 @@ func inKeywords(val string) bool {
 
 func inTypes(val string) bool {
 	_, ok := map[string]struct{}{
-		"int":  {},
-		"bool": {},
+		"int":    {},
+		"bool":   {},
+		"struct": {},
 	}[val]
 	return ok
 }

@@ -116,6 +116,9 @@ func genExpr(expr expression) {
 	case *obj:
 		genAddr(e)
 		load(e.ty)
+	case *memberRef:
+		genAddr(e)
+		load(e.ty)
 	case *deref:
 		genExpr(e.child)
 		load(e.ty)
@@ -178,6 +181,11 @@ func genAddr(expr expression) {
 	switch e := expr.(type) {
 	case *obj:
 		fmt.Printf("\tlea rax, [rbp%+d]\n", e.offset)
+		fmt.Printf("\tpush rax\n")
+	case *memberRef:
+		genAddr(e.child)
+		fmt.Printf("\tpop rax\n")
+		fmt.Printf("\tadd rax, %d\n", e.member.offset)
 		fmt.Printf("\tpush rax\n")
 	default:
 		panic("not a value")

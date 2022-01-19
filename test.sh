@@ -96,4 +96,9 @@ assert 5 'func main() int {a, b := myFunction(3, 4); return b}; func myFunction(
 assert 11 'func main() int {a, b := myFunction(3, 4); return a}; func myFunction(x, y int) (int, int) { lvar := 5; y = y * 2; return x + y, 5 }'
 echo ""
 
+echo "struct"
+echo ""
+assert 5 'func main() int { var x struct { a int; b int; }; x.a = 5; x.b = 3; return x.a}'
+echo ""
+
 echo OK

@@ -10,12 +10,15 @@ const (
 	typeKindInt typeKind = iota
 	typeKindBool
 	typeKindPtr
+	typeKindStruct
 )
 
 type typ struct {
 	kind typeKind
 	base *typ
 	size int
+
+	members []*member
 }
 
 func newType(kind typeKind, size int) *typ {
@@ -31,6 +34,11 @@ var (
 		"int":  8,
 		"bool": 1,
 	}
+	zeroValueMap = map[typeKind]expression{
+		typeKindInt: &intLit{
+			val: 0,
+		},
+	}
 )
 
 func newLiteralType(s string) *typ {
@@ -41,6 +49,25 @@ func pointerTo(base *typ) *typ {
 	ty := newType(typeKindPtr, 8)
 	ty.base = base
 	return ty
+}
+
+type member struct {
+	name   string
+	ty     *typ
+	offset int
+}
+
+func newStructType(members []*member) *typ {
+	offset := 0
+	for _, m := range members {
+		m.offset = offset
+		offset += m.ty.size
+	}
+	return &typ{
+		kind:    typeKindStruct,
+		size:    offset,
+		members: members,
+	}
 }
 
 func addType(n interface{}) {
@@ -98,6 +125,9 @@ func addType(n interface{}) {
 	case *intLit:
 		n.setType(newLiteralType("int"))
 		return
+	case *memberRef:
+		addType(n.child)
+		n.setType(n.member.ty)
 	case *binary:
 		addType(n.lhs)
 		addType(n.rhs)
