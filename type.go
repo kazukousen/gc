@@ -8,6 +8,7 @@ type typeKind int
 
 const (
 	typeKindInt typeKind = iota
+	typeKindByte
 	typeKindBool
 	typeKindPtr
 	typeKindStruct
@@ -15,9 +16,10 @@ const (
 )
 
 type typ struct {
-	kind typeKind
-	base *typ
-	size int
+	kind  typeKind
+	base  *typ
+	size  int
+	align int
 
 	// array
 	length int
@@ -27,17 +29,25 @@ type typ struct {
 }
 
 func newType(kind typeKind, size int) *typ {
-	return &typ{kind: kind, size: size}
+	return &typ{kind: kind, size: size, align: typeAlignMap[kind]}
 }
 
 var (
 	typeKindMap = map[string]typeKind{
 		"int":  typeKindInt,
+		"byte": typeKindByte,
 		"bool": typeKindBool,
 	}
 	typeKindSize = map[string]int{
 		"int":  8,
+		"byte": 1,
 		"bool": 1,
+	}
+	typeAlignMap = map[typeKind]int{
+		typeKindInt:  8,
+		typeKindByte: 1,
+		typeKindBool: 1,
+		typeKindPtr:  8,
 	}
 	zeroValueMap = map[typeKind]expression{
 		typeKindInt: &intLit{
@@ -56,12 +66,17 @@ func pointerTo(base *typ) *typ {
 	return ty
 }
 
+func alignTo(n, align int) int {
+	return (n + align - 1) / align * align
+}
+
 func arrayOf(base *typ, length int) *typ {
 	ty := &typ{
 		kind:   typeKindArray,
 		size:   base.size * length,
 		base:   base,
 		length: length,
+		align:  base.align,
 	}
 	return ty
 }

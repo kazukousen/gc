@@ -56,13 +56,13 @@ func (f *function) assignLVarOffsets() {
 	for i := range f.params {
 		lv := f.params[i]
 		offset += lv.ty.size
-		lv.offset = offset
+		lv.offset = alignTo(offset, lv.ty.size)
 	}
 	f.paramsSize = offset - 8
 	for i := len(f.results) - 1; i >= 0; i-- {
 		lv := f.results[i]
 		offset += lv.ty.size
-		lv.offset = offset
+		lv.offset = alignTo(offset, 8)
 	}
 	f.resultsSize = offset - f.paramsSize - 8
 
@@ -73,9 +73,9 @@ func (f *function) assignLVarOffsets() {
 		}
 		lv := f.locals[i]
 		offset += lv.ty.size
-		f.locals[i].offset = -offset
+		f.locals[i].offset = -alignTo(offset, lv.ty.size)
 	}
-	f.stackSize = offset
+	f.stackSize = alignTo(offset, 16)
 }
 
 // Statement
@@ -206,8 +206,13 @@ type obj struct {
 	offset int
 }
 
-func (e *obj) getType() *typ   { return e.ty }
-func (e *obj) setType(ty *typ) { e.ty = ty }
+func (e *obj) getType() *typ { return e.ty }
+func (e *obj) setType(ty *typ) {
+	if e.ty != nil {
+		return
+	}
+	e.ty = ty
+}
 
 type deref struct {
 	expression

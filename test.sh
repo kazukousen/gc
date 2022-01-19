@@ -78,6 +78,13 @@ assert 3 'func main() int { { var x=3; return *&x; } }'
 assert 3 'func main() int { { x := 3; var y = &x; z := &y; return **z; } }'
 echo ""
 
+echo "byte"
+echo ""
+assert 3 'func main() byte { byte x = 3; return x }'
+assert 3 'func main() byte { byte x, y = 3, 2; return x }'
+assert 2 'func main() byte { byte x, y = 3, 2; return y }'
+echo ""
+
 echo "function"
 echo ""
 assert 32 'func main() int { return ret32() }; func ret32() int { return 32; }'

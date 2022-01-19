@@ -97,7 +97,7 @@ func genStmt(stmt statement) {
 		}
 		for i := len(s.lhs) - 1; i >= 0; i-- {
 			genAddr(s.lhs[i])
-			store()
+			store(s.lhs[i].getType())
 		}
 	}
 }
@@ -174,10 +174,14 @@ func load(ty *typ) {
 	fmt.Printf("\tpush rax\n")
 }
 
-func store() {
+func store(ty *typ) {
 	fmt.Printf("\tpop rdi\n")
 	fmt.Printf("\tpop rax\n")
-	fmt.Printf("\tmov [rdi], rax\n")
+	if ty.size == 1 {
+		fmt.Printf("\tmov [rdi], al\n")
+	} else {
+		fmt.Printf("\tmov [rdi], rax\n")
+	}
 }
 
 func genAddr(expr expression) {

@@ -118,6 +118,7 @@ func inKeywords(val string) bool {
 func inTypes(val string) bool {
 	_, ok := map[string]struct{}{
 		"int":    {},
+		"byte":   {},
 		"bool":   {},
 		"struct": {},
 	}[val]
