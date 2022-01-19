@@ -160,7 +160,7 @@ type singleMultiValuedExpression interface {
 
 type expressionList []expression
 
-func (es expressionList) singleMultiValuedExpression() singleMultiValuedExpression {
+func (es expressionList) convertSingleMultiValuedExpression() singleMultiValuedExpression {
 	if len(es) == 1 {
 		if e, ok := es[0].(singleMultiValuedExpression); ok {
 			return e
@@ -250,6 +250,13 @@ func (e *funcCall) setType(ty *typ) { e.ty = ty }
 var locals []*obj
 var results []*obj
 var callees []*funcCall
+var uniqueID = 0
+
+func newUniqueName() string {
+	s := fmt.Sprintf(".L..%d", uniqueID)
+	uniqueID++
+	return s
+}
 
 func createLocalVar(name string) *obj {
 	lv := &obj{
@@ -611,15 +618,12 @@ func parseSimpleStmt() statement {
 
 	if consume(":=") {
 		// ShortVarDecl
-		for i, l := range expr {
-			switch l := l.(type) {
-			case *obj:
-				lv := createLocalVar(l.name)
-				lv.ty = newLiteralType("int")
-				expr[i] = lv
-			}
+		rhs := parseExpressionList()
+		ret := &assignment{lhs: expr, rhs: rhs}
+		if se := rhs.convertSingleMultiValuedExpression(); se == nil {
+			addType(ret)
 		}
-		return &assignment{lhs: expr, rhs: parseExpressionList()}
+		return ret
 	}
 
 	return &expressionStmt{child: expr[0]}
@@ -747,7 +751,6 @@ func parsePrimary() expression {
 }
 
 func parseMemberRef(expr expression) expression {
-	addType(expr)
 	ty := expr.getType()
 	if ty.kind != typeKindStruct {
 		panic("expected struct type")
@@ -786,7 +789,7 @@ func parseOperand() expression {
 
 		lv := findLocalVar(tok.val)
 		if lv == nil {
-			return &obj{name: tok.val}
+			lv = createLocalVar(tok.val)
 		}
 
 		return lv
@@ -818,14 +821,15 @@ func parseLiteral() expression {
 	if consume("struct") {
 		ty := parseStructDecl()
 		expect("{")
-		return parseLiteralValue(ty)
+		tmp := parseStructLiteral(ty)
+		return tmp
 	}
 
 	return parseIntLit()
 }
 
-// StructType    = "struct" "{" { FieldDecl ";" } "}" .
-// FieldDecl     = (IdentifierList Type) .
+// StructType = "struct" "{" { FieldDecl ";" } "}" .
+// FieldDecl  = (IdentifierList Type) .
 func parseStructDecl() *typ {
 	expect("{")
 	var members []*member
@@ -849,11 +853,19 @@ func parseStructDecl() *typ {
 // Key           = FieldName | Expression | LiteralValue .
 // FieldName     = identifier .
 // Element       = Expression | LiteralValue .
-func parseLiteralValue(ty *typ) *obj {
-	expect("}")
-	v := &obj{
-		ty: ty,
+
+// LiteralValue  = "{" [ ElementList [ "," ] ] "}" .
+// ElementList   = KeyedElement { "," KeyedElement } .
+// KeyedElement  = [ Key ":" ] Element .
+// Key           = identifier .
+// Element       = Expression | LiteralValue .
+func parseStructLiteral(ty *typ) *obj {
+	v := createLocalVar(newUniqueName())
+	for i := 0; !consume("}"); i++ {
+		// TODO:
+		panic("unimplemented")
 	}
+	v.ty = ty
 	return v
 }
 

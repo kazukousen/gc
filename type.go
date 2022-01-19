@@ -103,7 +103,7 @@ func addType(n interface{}) {
 		addType(n.child)
 		return
 	case *assignment:
-		if se := n.rhs.singleMultiValuedExpression(); se != nil {
+		if se := n.rhs.convertSingleMultiValuedExpression(); se != nil {
 			addType(se)
 			rhs := se.multiValues()
 			if len(n.lhs) != len(rhs) {
@@ -153,7 +153,7 @@ func addType(n interface{}) {
 		for _, arg := range n.args {
 			addType(arg)
 		}
-		if len(n.target.results) > 0 {
+		if n.target != nil && len(n.target.results) > 0 {
 			n.setType(n.target.results[0].getType())
 		}
 		return

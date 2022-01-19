@@ -99,6 +99,9 @@ echo ""
 echo "struct"
 echo ""
 assert 5 'func main() int { var x struct { a int; b int; }; x.a = 5; x.b = 3; return x.a}'
+assert 3 'func main() int { var x struct { a int; b int; }; x.a = 5; x.b = 3; return x.b}'
+assert 5 'func main() int { x := struct { a int; b int; }{}; x.a = 5; x.b = 3; return x.a}'
+assert 3 'func main() int { x := struct { a int; b int; }{}; x.a = 5; x.b = 3; return x.b}'
 echo ""
 
 echo OK
