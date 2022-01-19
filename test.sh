@@ -38,6 +38,8 @@ assert 5 'func main() int { var a = 5; return a; }'
 assert 3 'func main() int { var foo=3; return foo; }'
 assert 8 'func main() int { var foo123=3; var bar=5; return foo123+bar; }'
 assert 8 'func main() int { var foo123, bar = 3, 5; return foo123+bar; }'
+assert 3 'func main() int { var foo123, bar = 3, 5; return foo123; }'
+assert 5 'func main() int { var foo123, bar = 3, 5; return bar; }'
 echo ""
 
 echo "blocks"
@@ -91,6 +93,7 @@ echo ""
 assert 35 'func main() int {a, b := myFunction(3, 4); return a * b}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
 assert 7 'func main() int {a, b := myFunction(3, 4); return a}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
 assert 5 'func main() int {a, b := myFunction(3, 4); return b}; func myFunction(x, y int) (int, int) { lvar := 5; return x + y, 5 }'
+assert 11 'func main() int {a, b := myFunction(3, 4); return a}; func myFunction(x, y int) (int, int) { lvar := 5; y = y * 2; return x + y, 5 }'
 echo ""
 
 echo OK

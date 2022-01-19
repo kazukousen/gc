@@ -117,7 +117,8 @@ func inKeywords(val string) bool {
 
 func inTypes(val string) bool {
 	_, ok := map[string]struct{}{
-		"int": {},
+		"int":  {},
+		"bool": {},
 	}[val]
 	return ok
 }
@@ -135,7 +136,7 @@ func autoInsertSemicolon() {
 
 		finalTok := tokens[len(tokens)-1]
 
-		if finalTok.kind == tokenKindLiteral {
+		if finalTok.kind == tokenKindLiteral || finalTok.kind == tokenKindIdentifier {
 			return true
 		}
 

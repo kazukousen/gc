@@ -53,7 +53,7 @@ type function struct {
 
 func (f *function) assignLVarOffsets() {
 	offset := 8
-	for i := len(f.params) - 1; i >= 0; i-- {
+	for i := range f.params {
 		lv := f.params[i]
 		offset += lv.ty.size
 		lv.offset = offset

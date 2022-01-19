@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var funcName string
 
@@ -93,7 +95,7 @@ func genStmt(stmt statement) {
 		for i := range s.rhs {
 			genExpr(s.rhs[i])
 		}
-		for i := range s.lhs {
+		for i := len(s.lhs) - 1; i >= 0; i-- {
 			genAddr(s.lhs[i])
 			store()
 		}
@@ -104,8 +106,8 @@ func genExpr(expr expression) {
 	switch e := expr.(type) {
 	case *funcCall:
 		fmt.Printf("\tsub rsp, %d\n", e.target.resultsSize)
-		for _, arg := range e.args {
-			genExpr(arg)
+		for i := len(e.args) - 1; i >= 0; i-- {
+			genExpr(e.args[i])
 		}
 		fmt.Printf("\tcall %s\n", e.name)
 		fmt.Printf("\tadd rsp, %d\n", e.target.paramsSize)
@@ -113,10 +115,10 @@ func genExpr(expr expression) {
 		fmt.Printf("\tpush %d\n", e.val)
 	case *obj:
 		genAddr(e)
-		load()
+		load(e.ty)
 	case *deref:
 		genExpr(e.child)
-		load()
+		load(e.ty)
 	case *addr:
 		genAddr(e.child)
 	case *binary:
@@ -156,9 +158,13 @@ func genExpr(expr expression) {
 	}
 }
 
-func load() {
+func load(ty *typ) {
 	fmt.Printf("\tpop rax\n")
-	fmt.Printf("\tmov rax, [rax]\n")
+	if ty.size == 1 {
+		fmt.Printf("\tmovzx rax, byte ptr [rax]\n")
+	} else {
+		fmt.Printf("\tmov rax, [rax]\n")
+	}
 	fmt.Printf("\tpush rax\n")
 }
 
