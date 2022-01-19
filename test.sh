@@ -104,4 +104,10 @@ assert 5 'func main() int { x := struct { a int; b int; }{}; x.a = 5; x.b = 3; r
 assert 3 'func main() int { x := struct { a int; b int; }{}; x.a = 5; x.b = 3; return x.b}'
 echo ""
 
+echo "array"
+echo ""
+assert 5 'func main() int { var x [2]int; x[0] = 5; x[1] = 3; return x[0]}'
+assert 3 'func main() int { var x [2]int; x[0] = 5; x[1] = 3; return x[1]}'
+echo ""
+
 echo OK

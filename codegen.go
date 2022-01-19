@@ -162,6 +162,9 @@ func genExpr(expr expression) {
 }
 
 func load(ty *typ) {
+	if ty.kind == typeKindArray {
+		return
+	}
 	fmt.Printf("\tpop rax\n")
 	if ty.size == 1 {
 		fmt.Printf("\tmovzx rax, byte ptr [rax]\n")
@@ -182,6 +185,8 @@ func genAddr(expr expression) {
 	case *obj:
 		fmt.Printf("\tlea rax, [rbp%+d]\n", e.offset)
 		fmt.Printf("\tpush rax\n")
+	case *deref:
+		genExpr(e.child)
 	case *memberRef:
 		genAddr(e.child)
 		fmt.Printf("\tpop rax\n")

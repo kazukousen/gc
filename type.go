@@ -11,6 +11,7 @@ const (
 	typeKindBool
 	typeKindPtr
 	typeKindStruct
+	typeKindArray
 )
 
 type typ struct {
@@ -18,6 +19,10 @@ type typ struct {
 	base *typ
 	size int
 
+	// array
+	length int
+
+	// struct
 	members []*member
 }
 
@@ -48,6 +53,16 @@ func newLiteralType(s string) *typ {
 func pointerTo(base *typ) *typ {
 	ty := newType(typeKindPtr, 8)
 	ty.base = base
+	return ty
+}
+
+func arrayOf(base *typ, length int) *typ {
+	ty := &typ{
+		kind:   typeKindArray,
+		size:   base.size * length,
+		base:   base,
+		length: length,
+	}
 	return ty
 }
 
@@ -142,7 +157,12 @@ func addType(n interface{}) {
 		return
 	case *deref:
 		addType(n.child)
-		n.setType(n.child.getType())
+		ty := n.child.getType()
+		if ty.base != nil {
+			n.setType(ty.base)
+			return
+		}
+		n.setType(ty)
 		return
 	case *addr:
 		addType(n.child)

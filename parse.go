@@ -354,6 +354,14 @@ func initializer(expr expression) statement {
 		return &blockStmt{
 			stmts: stmts,
 		}
+	case typeKindArray:
+		lhs := make([]expression, ty.length)
+		rhs := make([]expression, ty.length)
+		for i := 0; i < ty.length; i++ {
+			lhs[i] = &deref{child: addBinary(expr, &intLit{val: i})}
+			rhs[i] = zeroValueMap[ty.base.kind]
+		}
+		return &assignment{lhs: lhs, rhs: rhs}
 	default:
 		return &assignment{lhs: expressionList{expr}, rhs: expressionList{zeroValueMap[ty.kind]}}
 	}
@@ -456,11 +464,18 @@ func parseParameterDecl() []*obj {
 func parseType() *typ {
 	tok := consumeToken(tokenKindType)
 	if tok == nil {
+		tok = consumeToken(tokenKindOperator)
+	}
+	if tok == nil {
 		panic(fmt.Sprintf("Expected a type: %+v", tokens[0]))
 	}
 
 	if tok.val == "struct" {
 		return parseStructDecl()
+	}
+
+	if tok.val == "[" {
+		return parseArrayType()
 	}
 
 	return newLiteralType(tok.val)
@@ -734,15 +749,20 @@ func parseUnary() expression {
 	}
 }
 
-// PrimaryExpr = Operand | PrimaryExpr Selector .
-// Selector    = "." identifier .
+// PrimaryExpr = Operand
+//             | PrimaryExpr Selector .
+//             | PrimaryExpr Index .
 func parsePrimary() expression {
 
 	expr := parseOperand()
 
 	for {
 		if consume(".") {
-			expr = parseMemberRef(expr)
+			expr = parseSelector(expr)
+			continue
+		}
+		if consume("[") {
+			expr = parseIndex(expr)
 			continue
 		}
 
@@ -750,7 +770,8 @@ func parsePrimary() expression {
 	}
 }
 
-func parseMemberRef(expr expression) expression {
+// Selector = "." identifier .
+func parseSelector(expr expression) expression {
 	ty := expr.getType()
 	if ty.kind != typeKindStruct {
 		panic("expected struct type")
@@ -770,6 +791,13 @@ func parseMemberRef(expr expression) expression {
 	}
 
 	return &memberRef{child: expr, member: mem}
+}
+
+// Index = "[" Expression "]" .
+func parseIndex(expr expression) expression {
+	index := parseExpression()
+	expect("]")
+	return &deref{child: addBinary(expr, index)}
 }
 
 // Operand = Literal | identifier [ Arguments ] | "(" Expression ")" .
@@ -828,6 +856,16 @@ func parseLiteral() expression {
 	return parseIntLit()
 }
 
+// ArrayType   = "[" ArrayLength "]" ElementType .
+// ArrayLength = Expression .
+// ElementType = Type .
+func parseArrayType() *typ {
+	length := parseNum()
+	expect("]")
+	base := parseType()
+	return arrayOf(base, length)
+}
+
 // StructType = "struct" "{" { FieldDecl ";" } "}" .
 // FieldDecl  = (IdentifierList Type) .
 func parseStructDecl() *typ {
@@ -879,4 +917,17 @@ func parseNum() int {
 	tok := tokens[0]
 	advance()
 	return tok.num
+}
+
+func addBinary(lhs, rhs expression) expression {
+	addType(lhs)
+	addType(rhs)
+
+	// ptr + num
+	if lhs.getType().base != nil && rhs.getType().kind == typeKindInt {
+		rhs = &binary{op: "*", lhs: &intLit{val: lhs.getType().base.size}, rhs: rhs}
+		return &binary{op: "+", lhs: lhs, rhs: rhs}
+	}
+
+	return &binary{op: "+", lhs: lhs, rhs: rhs}
 }

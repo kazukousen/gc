@@ -53,9 +53,11 @@ unary_op   = "+" | "-" | "*" | "&" .
 
 PrimaryExpr = Operand .
 
-Operand     = Literal | OperandName [ Arguments ] | "(" Expression ")" .
-Literal     = BasicLit .
-BasicLit    = int_lit .
+Operand       = Literal | OperandName [ Arguments ] | "(" Expression ")" .
+Literal       = BasicLit | CompositeLit .
+BasicLit      = int_lit .
+CompositeLit  = LiteralType LiteralValue .
+LiteralType   = StructType | ArrayType
 
 OperandName = identifier .
 Arguments   = "(" [ ExpressionList [ "..." ] [ "," ] ] ")" .
