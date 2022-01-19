@@ -749,6 +749,8 @@ func parseUnary() expression {
 		return &deref{child: parseUnary()}
 	case consume("&"):
 		return &addr{child: parseUnary()}
+	case consume("!"):
+		return &binary{op: "==", rhs: parseUnary(), lhs: &intLit{val: 0}}
 	default:
 		return parsePrimary()
 	}

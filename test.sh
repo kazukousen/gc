@@ -117,4 +117,11 @@ assert 5 'func main() int { var x [2]int; x[0] = 5; x[1] = 3; return x[0]}'
 assert 3 'func main() int { var x [2]int; x[0] = 5; x[1] = 3; return x[1]}'
 echo ""
 
+echo "boolean"
+echo ""
+assert 5 'func main() int { if check() { return 5 }; return 3 }; func check() bool { return 1 == 1 }'
+assert 3 'func main() int { if !check() { return 5 }; return 3 }; func check() bool { return 1 == 1 }'
+assert 3 'func main() int { if check() { return 5 }; return 3 }; func check() bool { return 1 != 1 }'
+echo ""
+
 echo OK
