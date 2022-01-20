@@ -91,6 +91,7 @@ func genStmt(stmt statement) {
 		fmt.Printf(".Lend%d:\n", cnt)
 	case *expressionStmt:
 		genExpr(s.child)
+		fmt.Printf("\tadd rsp, 8\n") // discard
 	case *assignment:
 		if se := s.rhs.convertSingleMultiValuedExpression(); se != nil {
 			for i := range s.rhs {
