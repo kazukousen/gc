@@ -178,6 +178,15 @@ type intLit struct {
 func (e *intLit) getType() *typ   { return e.ty }
 func (e *intLit) setType(ty *typ) { e.ty = ty }
 
+type compositeLit struct {
+	expression
+	ty    *typ
+	elems []expression
+}
+
+func (e *compositeLit) getType() *typ   { return e.ty }
+func (e *compositeLit) setType(ty *typ) { e.ty = ty }
+
 type memberRef struct {
 	expression
 	ty     *typ
@@ -642,11 +651,37 @@ func parseSimpleStmt() statement {
 		ret := &assignment{lhs: expr, rhs: rhs}
 		if se := rhs.convertSingleMultiValuedExpression(); se == nil {
 			addType(ret)
+			ret = &assignment{lhs: expandExpressionList(expr), rhs: expandExpressionList(rhs)}
 		}
 		return ret
 	}
 
 	return &expressionStmt{child: expr[0]}
+}
+
+func expandExpressionList(exprs []expression) []expression {
+	if len(exprs) == 0 {
+		return nil
+	}
+
+	expr, remain := exprs[0], exprs[1:]
+
+	expanded := []expression{expr}
+	ty := expr.getType()
+	if c, ok := expr.(*compositeLit); ok {
+		expanded = c.elems
+	} else if ty.kind == typeKindArray {
+		expanded = make([]expression, ty.length)
+		for i := 0; i < ty.length; i++ {
+			expanded[i] = &deref{child: addBinary(expr, &intLit{val: i})}
+		}
+	}
+
+	expandedRemain := expandExpressionList(remain)
+	if expandedRemain != nil {
+		return append(expanded, expandedRemain...)
+	}
+	return expanded
 }
 
 // ExpressionList = Expression { "," Expression } .
@@ -860,6 +895,12 @@ func parseLiteral() expression {
 		return tmp
 	}
 
+	if consume("[") {
+		ty := parseArrayType()
+		expect("{")
+		return parseArrayLiteral(ty)
+	}
+
 	return parseIntLit()
 }
 
@@ -898,6 +939,25 @@ func parseStructDecl() *typ {
 // Key           = FieldName | Expression | LiteralValue .
 // FieldName     = identifier .
 // Element       = Expression | LiteralValue .
+
+// LiteralValue  = "{" [ ElementList [ "," ] ] "}" .
+// ElementList   = { "," Element } .
+// Element       = Expression | LiteralValue .
+func parseArrayLiteral(ty *typ) expression {
+	ret := &compositeLit{
+		ty:    ty,
+		elems: []expression{},
+	}
+
+	for i := 0; !consume("}"); i++ {
+		if i > 0 {
+			expect(",")
+		}
+		ret.elems = append(ret.elems, parseExpression())
+	}
+
+	return ret
+}
 
 // LiteralValue  = "{" [ ElementList [ "," ] ] "}" .
 // ElementList   = KeyedElement { "," KeyedElement } .

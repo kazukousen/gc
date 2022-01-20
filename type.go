@@ -170,6 +170,8 @@ func addType(n interface{}) {
 		return
 	case *obj:
 		return
+	case *compositeLit:
+		return
 	case *deref:
 		addType(n.child)
 		ty := n.child.getType()

@@ -92,13 +92,23 @@ func genStmt(stmt statement) {
 	case *expressionStmt:
 		genExpr(s.child)
 	case *assignment:
-		for i := range s.rhs {
-			genExpr(s.rhs[i])
+		if se := s.rhs.convertSingleMultiValuedExpression(); se != nil {
+			for i := range s.rhs {
+				genExpr(s.rhs[i])
+			}
+			for i := len(s.lhs) - 1; i >= 0; i-- {
+				genAddr(s.lhs[i])
+				store(s.lhs[i].getType())
+			}
+		} else {
+			for i := range s.rhs {
+				genExpr(s.rhs[i])
+				genAddr(s.lhs[i])
+				store(s.lhs[i].getType())
+			}
 		}
-		for i := len(s.lhs) - 1; i >= 0; i-- {
-			genAddr(s.lhs[i])
-			store(s.lhs[i].getType())
-		}
+	default:
+		panic(fmt.Sprintf("Unsupport statement type: %T\n", s))
 	}
 }
 
@@ -158,6 +168,8 @@ func genExpr(expr expression) {
 		}
 		fmt.Printf("\tpush rax\n")
 		return
+	default:
+		panic(fmt.Sprintf("Unsupport expression type: %T\n", e))
 	}
 }
 
@@ -189,6 +201,10 @@ func genAddr(expr expression) {
 	case *obj:
 		fmt.Printf("\tlea rax, [rbp%+d]\n", e.offset)
 		fmt.Printf("\tpush rax\n")
+	case *compositeLit:
+		for _, elem := range e.elems {
+			genExpr(elem)
+		}
 	case *deref:
 		genExpr(e.child)
 	case *memberRef:

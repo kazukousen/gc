@@ -117,6 +117,10 @@ echo "array"
 echo ""
 assert 5 'func main() int { var x [2]int; x[0] = 5; x[1] = 3; return x[0]}'
 assert 3 'func main() int { var x [2]int; x[0] = 5; x[1] = 3; return x[1]}'
+assert 3 'func main() int { x := [2]int{5, 3}; return x[1]}'
+assert 5 'func main() int { x := [2]int{5, 3}; return x[0]}'
+assert 6 'func main() int { x := [2]int{1+2+3, 1+2*3}; return x[0]}'
+assert 7 'func main() int { x := [2]int{1+2+3, 1+2*3}; return x[1]}'
 echo ""
 
 echo "boolean"
